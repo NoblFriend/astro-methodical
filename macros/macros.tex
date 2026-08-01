@@ -1,0 +1,23 @@
+% Единый источник кастомных команд.
+% Эти команды работают и в формулах на сайте (KaTeX), и в PDF (XeLaTeX),
+% и внутри TikZ-картинок.
+%
+% Ограничение: чтобы команда подхватилась KaTeX, определяйте её через
+% \newcommand{\имя}{...} или \newcommand{\имя}[число аргументов]{...}
+% (одна команда — одна строка или один блок с балансом скобок).
+
+% --- Астрономические обозначения ---
+\newcommand{\Msun}{M_{\odot}}
+\newcommand{\Rsun}{R_{\odot}}
+\newcommand{\Lsun}{L_{\odot}}
+\newcommand{\Mearth}{M_{\oplus}}
+\newcommand{\au}{\text{а.е.}}
+\newcommand{\pc}{\text{пк}}
+
+% --- Математика ---
+\newcommand{\dif}{\mathrm{d}}
+\newcommand{\avg}[1]{\left\langle #1 \right\rangle}
+\newcommand{\abs}[1]{\left| #1 \right|}
+\newcommand{\pdv}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\dv}[2]{\frac{\dif #1}{\dif #2}}
+\newcommand{\vect}[1]{\boldsymbol{#1}}

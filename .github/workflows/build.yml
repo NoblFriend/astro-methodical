@@ -1,0 +1,57 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка pandoc
+        run: |
+          wget -q https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-1-amd64.deb
+          sudo dpkg -i pandoc-3.6.4-1-amd64.deb
+
+      - name: Установка TeX Live и шрифтов
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-xetex texlive-latex-extra texlive-lang-cyrillic \
+            texlive-lang-other texlive-pictures texlive-fonts-extra \
+            fonts-paratype dvisvgm ghostscript poppler-utils
+
+      - name: Зависимости Python
+        run: pip install pyyaml
+
+      - name: Сборка сайта и PDF
+        run: python3 build.py --pdf
+
+      - name: Поисковый индекс (Pagefind)
+        run: npx --yes pagefind --site site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

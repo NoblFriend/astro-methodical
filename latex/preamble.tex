@@ -1,0 +1,76 @@
+% Общая преамбула для всех PDF-сборок.
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX}
+\usepackage{polyglossia}
+\setdefaultlanguage{russian}
+\setotherlanguage{english}
+\setmainfont{PT Serif}
+\setsansfont{PT Sans}
+\newfontfamily\cyrillicfont{PT Serif}[Ligatures=TeX]
+\newfontfamily\cyrillicfontsf{PT Sans}[Ligatures=TeX]
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.2cm}
+\usepackage{graphicx}
+\usepackage{float}
+\floatplacement{figure}{H} % картинки стоят там, где вставлены, не уплывают
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{calc}
+\usepackage{etoolbox}
+\usepackage[most]{tcolorbox}
+\usepackage[hidelinks]{hyperref}
+
+% Совместимость с LaTeX-выводом Pandoc
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\pandocbounded}[1]{#1}
+\setkeys{Gin}{width=0.75\linewidth, keepaspectratio}
+
+% --- Палитра ---
+\definecolor{envframe}{HTML}{3D5A99}
+\definecolor{envback}{HTML}{F2F5FB}
+\definecolor{inkmuted}{HTML}{555B66}
+
+% --- Определение ---
+\newtcolorbox{defbox}[1][]{%
+  enhanced, breakable,
+  colback=envback, colframe=envframe, boxrule=0.6pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  coltitle=white, colbacktitle=envframe, fonttitle=\bfseries\small,
+  title={Определение\ifstrempty{#1}{}{ · #1}}}
+
+% --- Формула в рамке с подписью ---
+\newtcolorbox{formulabox}{%
+  enhanced, breakable,
+  colback=white, colframe=black!65, boxrule=0.8pt, arc=1pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt,
+  colbacklower=black!4, fontlower=\small\itshape,
+  halign lower=flush center}
+
+% --- Заметка: левая черта, мелкий шрифт ---
+\newtcolorbox{noteenv}{%
+  blanker, breakable,
+  borderline west={2pt}{0pt}{black!35},
+  left=10pt, top=2pt, bottom=2pt,
+  fontupper=\small\color{inkmuted}}
+
+% --- Задача (автонумерация) и решение ---
+\newtcolorbox[auto counter]{problembox}{%
+  enhanced, breakable,
+  colback=black!3, colframe=black!35, boxrule=0.5pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries, coltitle=black,
+  attach title to upper={\par\smallskip},
+  title={Задача~\thetcbcounter.}}
+
+\newenvironment{solutionenv}
+  {\par\medskip\noindent{\itshape Решение.}\par\nobreak\smallskip}
+  {\par\medskip}
+
+% Сброс нумерации задач (вызывается перед каждой статьёй)
+\makeatletter
+\newcommand{\resetproblems}{\setcounter{tcb@cnt@problembox}{0}}
+\makeatother

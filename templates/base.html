@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru" data-root="{{root}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{root}}/assets/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>
+window.KATEX_MACROS = {{katex_macros}};
+document.addEventListener("DOMContentLoaded", function () {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: "\\(", right: "\\)", display: false },
+        { left: "\\[", right: "\\]", display: true }
+      ],
+      macros: window.KATEX_MACROS,
+      throwOnError: false
+    });
+  }
+});
+</script>
+<script defer src="{{root}}/assets/app.js"></script>
+</head>
+<body>
+<aside class="sidebar">
+  <p class="site-title"><a href="{{root}}/index.html">{{site_title}}</a></p>
+  <p class="site-tagline">{{site_tagline}}</p>
+  <div class="sidebar-tools">
+    <div id="search-box"></div>
+    <button id="theme-toggle" class="theme-toggle" title="Переключить тему">◐</button>
+  </div>
+  <nav>
+{{sidebar}}
+  </nav>
+</aside>
+<div class="main">
+  <div class="breadcrumbs">{{breadcrumbs}}</div>
+{{content}}
+  <div class="footer">{{footer}}</div>
+</div>
+</body>
+</html>
