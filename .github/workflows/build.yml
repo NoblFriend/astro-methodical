@@ -29,9 +29,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            texlive-xetex texlive-latex-extra texlive-lang-cyrillic \
-            texlive-lang-other texlive-pictures texlive-fonts-extra \
-            fonts-paratype dvisvgm ghostscript poppler-utils
+            texlive-xetex texlive-latex-extra texlive-fonts-recommended \
+            texlive-lang-cyrillic texlive-lang-other texlive-pictures \
+            texlive-fonts-extra fonts-paratype dvisvgm ghostscript poppler-utils
 
       - name: Зависимости Python
         run: pip install pyyaml
