@@ -115,12 +115,15 @@ def preflight(need_pdf):
 
 # ---------------------------------------------------------------- макросы
 
-def parse_katex_macros():
-    """\newcommand из macros.tex → словарь для KaTeX (число аргументов KaTeX выводит сам)."""
+def parse_math_macros():
+    """\newcommand из macros.tex → словарь макросов MathJax.
+
+    Формат MathJax: {"имя": "тело"} или {"имя": ["тело", число_аргументов]}.
+    """
     text = MACROS.read_text(encoding="utf-8")
     macros = {}
-    for m in re.finditer(r"\\(?:re)?newcommand\{(\\[A-Za-z]+)\}(?:\[\d+\])?", text):
-        name = m.group(1)
+    for m in re.finditer(r"\\(?:re)?newcommand\{\\([A-Za-z]+)\}(?:\[(\d+)\])?", text):
+        name, nargs = m.group(1), m.group(2)
         i = m.end()
         while i < len(text) and text[i] in " \t":
             i += 1
@@ -135,7 +138,8 @@ def parse_katex_macros():
                 if depth == 0:
                     break
             j += 1
-        macros[name] = text[i + 1 : j]
+        body = text[i + 1 : j]
+        macros[name] = [body, int(nargs)] if nargs else body
     return macros
 
 
@@ -399,7 +403,7 @@ class SiteWriter:
         self.tree = tree
         self.config = config
         self.base = (TEMPLATES / "base.html").read_text(encoding="utf-8")
-        self.katex_macros = json.dumps(parse_katex_macros(), ensure_ascii=False)
+        self.math_macros = json.dumps(parse_math_macros(), ensure_ascii=False)
         maintainers = ", ".join(config.get("maintainers", []))
         self.footer = (
             f"{esc(config['title'])} · {esc(maintainers)} · "
@@ -415,7 +419,7 @@ class SiteWriter:
             "title": f"{esc(title)} · {esc(self.config['title'])}",
             "site_title": esc(self.config["title"]),
             "site_tagline": esc(self.config.get("tagline", "")),
-            "katex_macros": self.katex_macros,
+            "math_macros": self.math_macros,
             "sidebar": sidebar_html(self.tree, rel_path),
             "breadcrumbs": crumbs,
             "content": content,
