@@ -1,0 +1,10 @@
+title: Уравнение состояния идеального газа
+description: Об физике ыы
+authors:
+  - Василий Муратов
+order: 10
+blocks:
+  theory:
+    authors: [Василий Муратов]
+  methods:
+    authors: [Василий Муратов]
