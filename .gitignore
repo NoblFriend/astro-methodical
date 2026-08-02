@@ -8,3 +8,4 @@ __pycache__/
 *.toc
 *.synctex.gz
 .DS_Store
+*.deb

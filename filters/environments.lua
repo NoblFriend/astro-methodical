@@ -108,6 +108,7 @@ function Pandoc(doc)
 
   local figdir = meta_str("figdir")
   local prefix = meta_str("eqprefix")
+  local siteurl = meta_str("siteurl")
   local start = tonumber(meta_str("eqstart") or "0") or 0
   local labels = {}
   for pair in (meta_str("eqlabels") or ""):gmatch("[^|]+") do
@@ -115,12 +116,24 @@ function Pandoc(doc)
     if k then labels[k] = v end
   end
 
+  -- Ссылка на формулу — кликабельная: ведёт на якорь формулы.
+  local function eq_link(tag, text)
+    if is_latex() then
+      return "\\hyperlink{eq-" .. tag .. "}{" .. text .. "}"
+    end
+    return "\\href{#eq-" .. tag .. "}{" .. text .. "}"
+  end
+
   local function subst_refs(tex)
     tex = tex:gsub("\\eqref%{([^}]*)%}", function(l)
-      return "(\\text{" .. (labels[l] or "??") .. "})"
+      local t = labels[l]
+      if not t then return "(\\text{??})" end
+      return eq_link(t, "(\\text{" .. t .. "})")
     end)
     tex = tex:gsub("\\ref%{([^}]*)%}", function(l)
-      return "\\text{" .. (labels[l] or "??") .. "}"
+      local t = labels[l]
+      if not t then return "\\text{??}" end
+      return eq_link(t, "\\text{" .. t .. "}")
     end)
     return tex
   end
@@ -136,10 +149,17 @@ function Pandoc(doc)
           if is_latex() then
             return pandoc.RawInline(
               "latex",
-              "\\begin{equation*}" .. tex .. "\\tag{" .. tag .. "}\\end{equation*}")
+              "\\hypertarget{eq-" .. tag .. "}{}\\begin{equation*}"
+                .. tex .. "\\tag{" .. tag .. "}\\end{equation*}")
           end
           m.text = tex .. "\\tag{" .. tag .. "}"
-          return m
+          -- Якорь сырым HTML: --id-prefix не должен его переименовывать,
+          -- иначе ссылки из других блоков статьи промахнутся
+          return {
+            pandoc.RawInline("html", '<span id="eq-' .. tag .. '">'),
+            m,
+            pandoc.RawInline("html", "</span>"),
+          }
         end
         m.text = tex
         return m
@@ -147,20 +167,38 @@ function Pandoc(doc)
       m.text = subst_refs(m.text)
       return m
     end,
+    Link = function(a)
+      -- Межстатейные ссылки: [текст](@/путь/к/статье) или (@/путь#якорь)
+      local rest = a.target:match("^@/(.*)$")
+      if rest then
+        local path, frag = rest:match("^([^#]*)#?(.*)$")
+        path = path:gsub("/$", "")
+        local suffix = "/index.html" .. (frag ~= "" and ("#" .. frag) or "")
+        if is_latex() then
+          a.target = (siteurl or "") .. "/" .. path .. suffix
+        else
+          a.target = "{{root}}/" .. path .. suffix
+        end
+        return a
+      end
+    end,
     RawInline = function(r)
       -- \eqref{...} прямо в тексте (вне математики)
       if r.format == "tex" or r.format == "latex" then
         local l = r.text:match("^\\eqref%{([^}]*)%}$")
         if l and labels[l] then
+          local t = labels[l]
           if is_latex() then
-            return pandoc.RawInline("latex", "(" .. labels[l] .. ")")
+            return pandoc.RawInline("latex", "\\hyperlink{eq-" .. t .. "}{(" .. t .. ")}")
           end
-          return pandoc.Str("(" .. labels[l] .. ")")
+          return pandoc.Link("(" .. t .. ")", "#eq-" .. t)
         end
       end
     end,
     Image = function(img)
       local src = img.src
+      -- TikZ-исходник можно указать и с расширением .tex — приведём к без него
+      src = src:gsub("%.tex$", "")
       local has_ext = src:match("%.%w+$") ~= nil
       if not has_ext then
         src = src .. (is_latex() and ".pdf" or ".svg")

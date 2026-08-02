@@ -42,6 +42,8 @@ PREAMBLE = ROOT / "latex" / "preamble.tex"
 MACROS = ROOT / "macros" / "macros.tex"
 CONFIG = ROOT / "config.yml"
 
+SITE_URL = ""  # заполняется из config.yml в main()
+
 # Канонический состав статьи: (ключ, имя файла, заголовок блока)
 BLOCK_DEFS = [
     ("theory", "01-theory.md", "Обсуждение формул"),
@@ -63,7 +65,10 @@ def warn(msg):
 
 
 def run(cmd, **kw):
-    res = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    except FileNotFoundError:
+        raise ToolMissing(cmd[0]) from None
     if res.returncode != 0:
         raise RuntimeError(
             f"Команда {' '.join(map(str, cmd))} упала:\n{res.stdout[-2000:]}\n{res.stderr[-2000:]}"
@@ -358,9 +363,37 @@ def pandoc_latex(md_path, figdir, extra):
     res = run([
         "pandoc", str(md_path), "--from", "markdown", "--to", "latex",
         "--lua-filter", str(FILTER), "-M", f"figdir={figdir}",
+        "-M", f"siteurl={SITE_URL}",
         *extra,
     ])
     return res.stdout
+
+
+IMG_RE = re.compile(r"!\[[^\]]*\]\(\s*([^)\s]+)")
+XLINK_RE = re.compile(r"\]\(\s*@/([^)#\s]+)")
+
+
+def validate_refs(article):
+    """Понятные предупреждения про несуществующие картинки и межстатейные ссылки."""
+    for _, fname, _ in article["blocks"]:
+        text = (article["dir"] / fname).read_text(encoding="utf-8")
+        for m in IMG_RE.finditer(text):
+            src = m.group(1)
+            if src.startswith(("http://", "https://")):
+                continue
+            base = re.sub(r"\.tex$", "", src)
+            if "." in Path(base).name:
+                expected = article["dir"] / src
+            else:
+                expected = article["dir"] / (base + ".tex")
+            if not expected.exists():
+                warn(f'{article["rel"]}/{fname}: картинка «{src}» не найдена — '
+                     f"ожидаю файл {expected}")
+        for m in XLINK_RE.finditer(text):
+            path = m.group(1).rstrip("/")
+            if not (CONTENT / path / "meta.yml").exists():
+                warn(f'{article["rel"]}/{fname}: ссылка @/{path} никуда не ведёт — '
+                     f"нет статьи content/{path}/")
 
 
 # ---------------------------------------------------------------- HTML-страницы
@@ -543,6 +576,7 @@ def build_site(tree, config, writer):
 
     for art in [a for sec in tree for a in iter_articles(sec)]:
         analyze_equations(art)
+        validate_refs(art)
 
     cards = []
     for sec in tree:
@@ -707,18 +741,24 @@ def main():
 
     preflight(need_pdf=args.pdf)
     config = read_yaml(CONFIG)
+    global SITE_URL
+    SITE_URL = str(config.get("url", "")).rstrip("/")
     tree = load_tree()
     if not tree:
         warn("в content/ не найдено ни одной статьи")
         sys.exit(1)
 
-    writer = SiteWriter(tree, config)
-    build_site(tree, config, writer)
-    log(f"сайт готов: {SITE}")
+    try:
+        writer = SiteWriter(tree, config)
+        build_site(tree, config, writer)
+        log(f"сайт готов: {SITE}")
 
-    if args.pdf:
-        build_pdfs(tree, config)
-        log("все PDF готовы")
+        if args.pdf:
+            build_pdfs(tree, config)
+            log("все PDF готовы")
+    except ToolMissing as e:
+        warn(f"не установлена программа «{e}» — см. раздел «Локальная сборка» в README")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
