@@ -50,6 +50,10 @@ BLOCK_DEFS = [
 ]
 
 
+class ToolMissing(RuntimeError):
+    """Не установлена внешняя программа."""
+
+
 def log(msg):
     print(f"[build] {msg}")
 
@@ -70,6 +74,43 @@ def run(cmd, **kw):
 def read_yaml(path):
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
+
+PANDOC_HINT = (
+    "  Ubuntu/WSL: wget https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-1-amd64.deb\n"
+    "              sudo dpkg -i pandoc-3.6.4-1-amd64.deb\n"
+    "  macOS:      brew install pandoc"
+)
+TEX_HINT = (
+    "  Ubuntu/WSL: sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-recommended \\\n"
+    "                texlive-lang-cyrillic texlive-lang-other texlive-pictures fonts-paratype \\\n"
+    "                dvisvgm ghostscript poppler-utils\n"
+    "  macOS:      MacTeX (https://tug.org/mactex/)"
+)
+
+
+def preflight(need_pdf):
+    """Понятные сообщения вместо трейсбеков, если чего-то нет в системе."""
+    problems = []
+    if not shutil.which("pandoc"):
+        problems.append(f"Не найден pandoc (конвертер Markdown). Как поставить:\n{PANDOC_HINT}")
+    else:
+        first = run(["pandoc", "--version"]).stdout.splitlines()[0]
+        m = re.search(r"(\d+)\.(\d+)", first)
+        if m and (int(m.group(1)), int(m.group(2))) < (3, 0):
+            problems.append(
+                f"Найден слишком старый {first!r} — нужен pandoc ≥ 3.0\n"
+                f"(apt-версия в Ubuntu 22.04 — это 2.x). Как поставить свежий:\n{PANDOC_HINT}"
+            )
+    if need_pdf and not shutil.which("xelatex"):
+        problems.append(f"Для сборки PDF нужен XeLaTeX. Как поставить:\n{TEX_HINT}")
+    if problems:
+        for p in problems:
+            warn(p)
+        sys.exit(1)
+    if not need_pdf and not shutil.which("xelatex"):
+        warn("xelatex не найден — сайт соберётся, но TikZ-картинки будут пропущены.\n"
+             f"Чтобы собирались картинки и PDF:\n{TEX_HINT}")
 
 
 # ---------------------------------------------------------------- макросы
@@ -235,11 +276,14 @@ def eq_args(article, block_key):
 # ---------------------------------------------------------------- картинки
 
 def convert_pdf_to_svg(pdf_path, svg_path):
-    try:
-        run(["dvisvgm", "--pdf", "--optimize", "-o", str(svg_path), str(pdf_path)])
-        return
-    except (RuntimeError, FileNotFoundError):
-        pass
+    if shutil.which("dvisvgm"):
+        try:
+            run(["dvisvgm", "--pdf", "--optimize", "-o", str(svg_path), str(pdf_path)])
+            return
+        except RuntimeError:
+            pass
+    if not shutil.which("pdftocairo"):
+        raise ToolMissing("dvisvgm или pdftocairo (пакеты dvisvgm/ghostscript или poppler-utils)")
     run(["pdftocairo", "-svg", str(pdf_path), str(svg_path)])
 
 
@@ -251,6 +295,8 @@ def compile_figure(tex_path):
     pdf, svg = outdir / (tex_path.stem + ".pdf"), outdir / (tex_path.stem + ".svg")
     if pdf.exists() and svg.exists():
         return pdf, svg
+    if not shutil.which("xelatex"):
+        raise ToolMissing("xelatex")
     outdir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -280,7 +326,11 @@ def prepare_figures(article):
         if f.name.startswith("."):
             continue
         if f.suffix == ".tex":
-            pdf, svg = compile_figure(f)
+            try:
+                pdf, svg = compile_figure(f)
+            except ToolMissing as e:
+                warn(f"{f.relative_to(CONTENT)}: картинка пропущена — не установлен {e}")
+                continue
             shutil.copy(pdf, latex_dir / pdf.name)
             site_files.append(svg)
         else:
@@ -651,6 +701,7 @@ def main():
             if d.exists():
                 shutil.rmtree(d)
 
+    preflight(need_pdf=args.pdf)
     config = read_yaml(CONFIG)
     tree = load_tree()
     if not tree:

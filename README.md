@@ -98,7 +98,22 @@ $$ \frac{\Delta\lambda}{\lambda_0} = \frac{v_r}{c} $$
 
 ## Локальная сборка
 
-Нужны: `pandoc`, XeLaTeX (TeX Live / MacTeX), `dvisvgm`, Python 3.
+Нужны: Python 3 и `pandoc` **≥ 3.0** — этого достаточно, чтобы собирать сайт
+и пользоваться живым предпросмотром (TikZ-картинки будут пропущены).
+Для картинок и PDF нужен ещё XeLaTeX.
+
+```bash
+# Ubuntu / WSL (apt-овский pandoc бывает старым 2.x — ставьте deb с GitHub):
+wget https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-1-amd64.deb
+sudo dpkg -i pandoc-3.6.4-1-amd64.deb
+# для картинок и PDF:
+sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-recommended \
+  texlive-lang-cyrillic texlive-lang-other texlive-pictures fonts-paratype \
+  dvisvgm ghostscript poppler-utils
+
+# macOS:
+brew install pandoc          # + MacTeX для картинок и PDF
+```
 
 ```bash
 make site     # сайт → site/
