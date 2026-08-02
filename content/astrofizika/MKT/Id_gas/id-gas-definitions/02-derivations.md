@@ -8,12 +8,12 @@ $$
     \mu=N_A\sum\limits_{k=1}^{l}\alpha_k m_k=\sum\limits_{k=1}^{l}\alpha_k \mu_k
     \label{2.8}
 $$
-Теперь свяжем между собой $\alpha_k$ и $\beta_k$. Заметим, что число молекул каждого сорта $N_k$ из \eqref{2.4}:
+Теперь свяжем между собой $\alpha_k$ и $\beta_k$. Заметим, что число молекул каждого сорта $N_k$ из $\eqref{nu_from_Masses}$:
 $$ 
     N_k = \frac{m_k}{\mu_k} N_A= \frac{\beta_k M}{\mu_k}N_A\implies \alpha_k = \frac{N_k}{N} = \frac{\beta_k M}{\mu_k}\frac{N_A}{N}  = \frac{\beta_k \mu }{\mu_k}
     \label{2.9}
 $$
-Теперь, суммируя \eqref{2.9} по всем $k$, получим
+Теперь, суммируя $\eqref{2.9}$ по всем $k$, получим
 $$ 
     \frac{1}{\mu} =\sum\limits_{k=1}^{l}\frac{\beta_k}{\mu_k}.
     \label{2.10}
