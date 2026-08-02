@@ -2,11 +2,9 @@ PY = .venv/bin/python
 
 .PHONY: site pdf search serve clean new deps
 
-deps: .venv/bin/python
-
-.venv/bin/python:
-	python3 -m venv .venv
-	.venv/bin/pip install --quiet pyyaml
+deps:                 ## venv + зависимости; чинит и полусозданное окружение
+	@test -x .venv/bin/python || python3 -m venv .venv
+	@.venv/bin/python -c "import yaml" 2>/dev/null || .venv/bin/pip install --quiet pyyaml
 
 site: deps            ## собрать сайт в site/
 	$(PY) build.py
