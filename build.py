@@ -3,9 +3,17 @@
 
 content/ (markdown-блоки) → site/ (статический сайт) и site/pdf/ (LaTeX-PDF).
 
+Иерархия произвольной глубины: раздел / тема / подтема / ... / статья.
+Статья — папка с meta.yml; любая другая папка — группа (с _meta.yml).
+
+Нумерация формул сквозная и иерархическая: <код раздела>.<индексы групп>.
+<индекс статьи>.<номер формулы>, например А.1.2.3. Код раздела задаётся
+полем `code` в _meta.yml (по умолчанию — первая буква названия), индексы
+определяются полем `order`.
+
 Использование:
     python build.py            # только сайт
-    python build.py --pdf      # сайт + все PDF (статьи/подтемы/разделы/учебник)
+    python build.py --pdf      # сайт + все PDF
     python build.py --clean    # снести site/ и .cache/ перед сборкой
 """
 
@@ -13,6 +21,7 @@ import argparse
 import hashlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -36,8 +45,8 @@ CONFIG = ROOT / "config.yml"
 # Канонический состав статьи: (ключ, имя файла, заголовок блока)
 BLOCK_DEFS = [
     ("theory", "01-theory.md", "Обсуждение формул"),
-    ("methods", "02-methods.md", "Методы решения задач"),
-    ("derivations", "03-derivations.md", "Выводы формул"),
+    ("derivations", "02-derivations.md", "Выводы формул"),
+    ("methods", "03-methods.md", "Методы решения задач"),
 ]
 
 
@@ -100,43 +109,127 @@ def load_node_meta(dirpath, fallback_title):
     return meta
 
 
-def load_tree():
-    """content/ → [{slug, meta, subtopics: [{slug, meta, articles: [...]}]}]"""
-    sections = []
-    for sec_dir in sorted(CONTENT.iterdir()):
-        if not sec_dir.is_dir() or sec_dir.name.startswith(("_", ".")):
+def load_article(art_dir):
+    meta = read_yaml(art_dir / "meta.yml")
+    for field in ("title", "description"):
+        if field not in meta:
+            warn(f"{art_dir}: в meta.yml нет поля «{field}»")
+            meta.setdefault(field, art_dir.name)
+    meta.setdefault("order", 999)
+    blocks = []
+    for key, fname, btitle in BLOCK_DEFS:
+        if (art_dir / fname).exists():
+            blocks.append((key, fname, btitle))
+        else:
+            warn(f"{art_dir}: нет блока {fname} — пропускаю")
+    return {"slug": art_dir.name, "dir": art_dir, "meta": meta, "blocks": blocks}
+
+
+def load_group(dirpath):
+    """Папка-группа: подгруппы + статьи (рекурсивно, произвольная глубина)."""
+    node = {
+        "slug": dirpath.name,
+        "dir": dirpath,
+        "meta": load_node_meta(dirpath, dirpath.name),
+        "groups": [],
+        "articles": [],
+    }
+    for child in sorted(dirpath.iterdir()):
+        if not child.is_dir() or child.name.startswith(("_", ".")):
             continue
-        sec = {"slug": sec_dir.name, "meta": load_node_meta(sec_dir, sec_dir.name), "subtopics": []}
-        for sub_dir in sorted(sec_dir.iterdir()):
-            if not sub_dir.is_dir() or sub_dir.name.startswith(("_", ".")):
-                continue
-            sub = {"slug": sub_dir.name, "meta": load_node_meta(sub_dir, sub_dir.name), "articles": []}
-            for art_dir in sorted(sub_dir.iterdir()):
-                if not art_dir.is_dir() or not (art_dir / "meta.yml").exists():
-                    continue
-                meta = read_yaml(art_dir / "meta.yml")
-                for field in ("title", "description"):
-                    if field not in meta:
-                        warn(f"{art_dir}: в meta.yml нет поля «{field}»")
-                        meta.setdefault(field, art_dir.name)
-                meta.setdefault("order", 999)
-                blocks = []
-                for key, fname, btitle in BLOCK_DEFS:
-                    if (art_dir / fname).exists():
-                        blocks.append((key, fname, btitle))
-                    else:
-                        warn(f"{art_dir}: нет блока {fname} — пропускаю")
-                sub["articles"].append(
-                    {"slug": art_dir.name, "dir": art_dir, "meta": meta, "blocks": blocks}
-                )
-            sub["articles"].sort(key=lambda a: (a["meta"]["order"], a["meta"]["title"]))
-            if sub["articles"]:
-                sec["subtopics"].append(sub)
-        sec["subtopics"].sort(key=lambda s: (s["meta"]["order"], s["meta"]["title"]))
-        if sec["subtopics"]:
-            sections.append(sec)
-    sections.sort(key=lambda s: (s["meta"]["order"], s["meta"]["title"]))
+        if (child / "meta.yml").exists():
+            node["articles"].append(load_article(child))
+        else:
+            sub = load_group(child)
+            if sub["groups"] or sub["articles"]:
+                node["groups"].append(sub)
+    node["groups"].sort(key=lambda g: (g["meta"]["order"], g["meta"]["title"]))
+    node["articles"].sort(key=lambda a: (a["meta"]["order"], a["meta"]["title"]))
+    return node
+
+
+def assign_codes(sections):
+    """Коды нумерации: раздел — буква, глубже — позиционные индексы."""
+    def walk(node, codes, rel):
+        node["codes"] = codes
+        node["rel"] = rel  # путь относительно content/, POSIX-строка
+        for i, g in enumerate(node["groups"], 1):
+            walk(g, codes + [str(i)], f'{rel}/{g["slug"]}')
+        for i, a in enumerate(node["articles"], 1):
+            a["codes"] = codes + [str(i)]
+            a["rel"] = f'{rel}/{a["slug"]}'
+
+    for sec in sections:
+        code = str(sec["meta"].get("code") or sec["meta"]["title"][0]).upper()
+        walk(sec, [code], sec["slug"])
+
+
+def load_tree():
+    root = load_group(CONTENT)
+    sections = root["groups"]
+    if root["articles"]:
+        warn("статьи в корне content/ игнорируются — положите их в раздел")
+    assign_codes(sections)
     return sections
+
+
+def iter_articles(node):
+    yield from node["articles"]
+    for g in node["groups"]:
+        yield from iter_articles(g)
+
+
+def article_count(node):
+    return len(list(iter_articles(node)))
+
+
+# ---------------------------------------------------------------- нумерация формул
+
+def display_maths(md_path):
+    """Исходники выключных формул файла в порядке появления."""
+    res = run(["pandoc", str(md_path), "--from", "markdown", "--to", "json"])
+    doc = json.loads(res.stdout)
+    out = []
+
+    def walk(x):
+        if isinstance(x, dict):
+            c = x.get("c")
+            if x.get("t") == "Math" and isinstance(c, list) and c and c[0].get("t") == "DisplayMath":
+                out.append(c[1])
+            else:
+                for v in x.values():
+                    walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+
+    walk(doc.get("blocks", []))
+    return out
+
+
+def analyze_equations(article):
+    """Сквозная нумерация формул статьи + карта \\label → номер."""
+    prefix = ".".join(article["codes"])
+    counter = 0
+    starts, labels = {}, {}
+    for key, fname, _ in article["blocks"]:
+        starts[key] = counter
+        for tex in display_maths(article["dir"] / fname):
+            counter += 1
+            for m in re.finditer(r"\\label\{([^}]*)\}", tex):
+                labels[m.group(1)] = f"{prefix}.{counter}"
+    article["eqprefix"] = prefix
+    article["eqstarts"] = starts
+    article["eqlabels"] = labels
+
+
+def eq_args(article, block_key):
+    enc = "|".join(f"{k}={v}" for k, v in article["eqlabels"].items())
+    return [
+        "-M", f'eqprefix={article["eqprefix"]}',
+        "-M", f'eqstart={article["eqstarts"][block_key]}',
+        "-M", f"eqlabels={enc}",
+    ]
 
 
 # ---------------------------------------------------------------- картинки
@@ -162,7 +255,6 @@ def compile_figure(tex_path):
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         shutil.copy(tex_path, tmp / tex_path.name)
-        import os
         env = dict(os.environ, TEXINPUTS=f".:{MACROS.parent}:")
         res = subprocess.run(
             ["xelatex", "-interaction=nonstopmode", "-halt-on-error", tex_path.name],
@@ -179,7 +271,7 @@ def compile_figure(tex_path):
 def prepare_figures(article):
     """Собирает фигуры статьи. Возвращает (files_for_site, dir_for_latex)."""
     figsrc = article["dir"] / "figures"
-    latex_dir = CACHE / "figbuild" / article["dir"].relative_to(CONTENT)
+    latex_dir = CACHE / "figbuild" / article["rel"]
     latex_dir.mkdir(parents=True, exist_ok=True)
     site_files = []
     if not figsrc.is_dir():
@@ -199,18 +291,20 @@ def prepare_figures(article):
 
 # ---------------------------------------------------------------- pandoc
 
-def pandoc_html(md_path):
+def pandoc_html(md_path, extra):
     res = run([
         "pandoc", str(md_path), "--from", "markdown", "--to", "html5",
         "--mathjax", "--shift-heading-level-by=1", "--lua-filter", str(FILTER),
+        *extra,
     ])
     return res.stdout
 
 
-def pandoc_latex(md_path, figdir):
+def pandoc_latex(md_path, figdir, extra):
     res = run([
         "pandoc", str(md_path), "--from", "markdown", "--to", "latex",
         "--lua-filter", str(FILTER), "-M", f"figdir={figdir}",
+        *extra,
     ])
     return res.stdout
 
@@ -233,22 +327,19 @@ def sidebar_html(tree, current):
         cur = ' class="current"' if href == current else ""
         return f'<a href="{{{{root}}}}/{href}"{cur}>{esc(text)}</a>'
 
+    def group_items(node, top=False):
+        cls = "nav-section" if top else "nav-subtopic"
+        out = [f'<li class="{cls}">', link(f'{node["rel"]}/index.html', node["meta"]["title"]), "<ul>"]
+        for g in node["groups"]:
+            out.extend(group_items(g))
+        for a in node["articles"]:
+            out.append("<li>" + link(f'{a["rel"]}/index.html', a["meta"]["title"]) + "</li>")
+        out.append("</ul></li>")
+        return out
+
     out = ["<ul>"]
     for sec in tree:
-        out.append('<li class="nav-section">')
-        out.append(link(f'{sec["slug"]}/index.html', sec["meta"]["title"]))
-        out.append("<ul>")
-        for sub in sec["subtopics"]:
-            out.append('<li class="nav-subtopic">')
-            out.append(link(f'{sec["slug"]}/{sub["slug"]}/index.html', sub["meta"]["title"]))
-            out.append("<ul>")
-            for art in sub["articles"]:
-                out.append("<li>")
-                out.append(link(f'{sec["slug"]}/{sub["slug"]}/{art["slug"]}/index.html',
-                                art["meta"]["title"]))
-                out.append("</li>")
-            out.append("</ul></li>")
-        out.append("</ul></li>")
+        out.extend(group_items(sec, top=True))
     out.append("</ul>")
     return "\n".join(out)
 
@@ -262,11 +353,10 @@ class SiteWriter:
         maintainers = ", ".join(config.get("maintainers", []))
         self.footer = (
             f"{esc(config['title'])} · {esc(maintainers)} · "
-            '<a href="https://github.com">исходники и контрибьюты — в git-репозитории</a>'
+            '<a href="https://github.com/NoblFriend/astro-methodical">исходники и контрибьюты</a>'
         )
 
     def write_page(self, rel_path, title, content, crumbs):
-        """rel_path — путь относительно site/, например 'a/b/index.html'."""
         out = SITE / rel_path
         out.parent.mkdir(parents=True, exist_ok=True)
         depth = len(Path(rel_path).parts) - 1
@@ -285,7 +375,6 @@ class SiteWriter:
         out.write_text(page, encoding="utf-8")
 
     def crumbs(self, parts):
-        """parts — [(текст, rel_href | None)], последний обычно без ссылки."""
         items = []
         for text, href in parts:
             if href:
@@ -303,11 +392,11 @@ def authors_line(authors):
     return ", ".join(esc(a) for a in authors)
 
 
-def article_content_html(sec, sub, art):
+def article_content_html(art):
     meta = art["meta"]
-    pdf_href = f'{{{{root}}}}/pdf/{sec["slug"]}/{sub["slug"]}/{art["slug"]}.pdf'
+    pdf_href = f'{{{{root}}}}/pdf/{art["rel"]}.pdf'
     parts = [
-        '<article>',
+        "<article>",
         '<header class="article-header">',
         f'<h1>{esc(meta["title"])}</h1>',
         f'<p class="article-description">{esc(meta["description"])}</p>',
@@ -325,9 +414,9 @@ def article_content_html(sec, sub, art):
     parts.append('<div id="block-panel-slot"></div>')
     parts.append('<div class="article-blocks">')
 
-    block_authors = meta.get("blocks", {}) or {}
+    block_authors = art["meta"].get("blocks", {}) or {}
     for key, fname, btitle in art["blocks"]:
-        fragment = pandoc_html(art["dir"] / fname)
+        fragment = pandoc_html(art["dir"] / fname, eq_args(art, key))
         bmeta = block_authors.get(key, {}) or {}
         btitle_final = bmeta.get("title", btitle)
         ba = authors_line(bmeta.get("authors"))
@@ -350,6 +439,45 @@ def card(href, title, description, meta_line=""):
     )
 
 
+def write_group_pages(writer, node, crumb_chain):
+    """Индексная страница группы + рекурсивно всё под ней."""
+    crumbs_here = crumb_chain + [(node["meta"]["title"], None)]
+    cards = []
+    for g in node["groups"]:
+        cards.append(card(f'{g["rel"]}/index.html', g["meta"]["title"],
+                          g["meta"].get("description", ""),
+                          f"статей: {article_count(g)}"))
+    for a in node["articles"]:
+        al = authors_line(a["meta"].get("authors"))
+        cards.append(card(f'{a["rel"]}/index.html', a["meta"]["title"],
+                          a["meta"]["description"], f"Авторы: {al}" if al else ""))
+    content = (
+        f'<h1>{esc(node["meta"]["title"])}</h1>'
+        f'<p class="article-description">{esc(node["meta"].get("description", ""))}</p>'
+        f'<div class="article-actions"><a href="{{{{root}}}}/pdf/{node["rel"]}.pdf">⬇ PDF целиком</a></div>'
+        f'<ul class="card-list">{"".join(cards)}</ul>'
+    )
+    writer.write_page(f'{node["rel"]}/index.html', node["meta"]["title"], content,
+                      writer.crumbs(crumbs_here))
+
+    child_chain = crumb_chain + [(node["meta"]["title"], f'{node["rel"]}/index.html')]
+    for g in node["groups"]:
+        write_group_pages(writer, g, child_chain)
+    for art in node["articles"]:
+        log(f'статья: {art["rel"]}')
+        site_figs, _ = prepare_figures(art)
+        if site_figs:
+            figout = SITE / art["rel"] / "figures"
+            figout.mkdir(parents=True, exist_ok=True)
+            for f in site_figs:
+                shutil.copy(f, figout / f.name)
+        writer.write_page(
+            f'{art["rel"]}/index.html', art["meta"]["title"],
+            article_content_html(art),
+            writer.crumbs(child_chain + [(art["meta"]["title"], None)]),
+        )
+
+
 def build_site(tree, config, writer):
     if SITE.exists():
         shutil.rmtree(SITE)
@@ -357,13 +485,14 @@ def build_site(tree, config, writer):
     for f in THEME.iterdir():
         shutil.copy(f, SITE / "assets" / f.name)
 
-    # Главная
+    for art in [a for sec in tree for a in iter_articles(sec)]:
+        analyze_equations(art)
+
     cards = []
     for sec in tree:
-        n = sum(len(sub["articles"]) for sub in sec["subtopics"])
-        cards.append(card(f'{sec["slug"]}/index.html', sec["meta"]["title"],
+        cards.append(card(f'{sec["rel"]}/index.html', sec["meta"]["title"],
                           sec["meta"].get("description", ""),
-                          f"подтем: {len(sec['subtopics'])} · статей: {n}"))
+                          f"статей: {article_count(sec)}"))
     home = (
         f'<h1>{esc(config["title"])}</h1>'
         f'<p class="article-description">{esc(config.get("tagline", ""))}</p>'
@@ -373,61 +502,7 @@ def build_site(tree, config, writer):
     writer.write_page("index.html", "Главная", home, writer.crumbs([("Главная", None)]))
 
     for sec in tree:
-        sec_href = f'{sec["slug"]}/index.html'
-        cards = []
-        for sub in sec["subtopics"]:
-            cards.append(card(f'{sec["slug"]}/{sub["slug"]}/index.html', sub["meta"]["title"],
-                              sub["meta"].get("description", ""),
-                              f"статей: {len(sub['articles'])}"))
-        content = (
-            f'<h1>{esc(sec["meta"]["title"])}</h1>'
-            f'<p class="article-description">{esc(sec["meta"].get("description", ""))}</p>'
-            f'<div class="article-actions"><a href="{{{{root}}}}/pdf/{sec["slug"]}.pdf">⬇ PDF раздела</a></div>'
-            f'<ul class="card-list">{"".join(cards)}</ul>'
-        )
-        writer.write_page(sec_href, sec["meta"]["title"], content,
-                          writer.crumbs([("Главная", "index.html"),
-                                         (sec["meta"]["title"], None)]))
-
-        for sub in sec["subtopics"]:
-            sub_href = f'{sec["slug"]}/{sub["slug"]}/index.html'
-            cards = []
-            for art in sub["articles"]:
-                meta_line = ""
-                al = authors_line(art["meta"].get("authors"))
-                if al:
-                    meta_line = f"Авторы: {al}"
-                cards.append(card(f'{sec["slug"]}/{sub["slug"]}/{art["slug"]}/index.html',
-                                  art["meta"]["title"], art["meta"]["description"], meta_line))
-            content = (
-                f'<h1>{esc(sub["meta"]["title"])}</h1>'
-                f'<p class="article-description">{esc(sub["meta"].get("description", ""))}</p>'
-                f'<div class="article-actions">'
-                f'<a href="{{{{root}}}}/pdf/{sec["slug"]}/{sub["slug"]}.pdf">⬇ PDF подтемы</a></div>'
-                f'<ul class="card-list">{"".join(cards)}</ul>'
-            )
-            writer.write_page(sub_href, sub["meta"]["title"], content,
-                              writer.crumbs([("Главная", "index.html"),
-                                             (sec["meta"]["title"], sec_href),
-                                             (sub["meta"]["title"], None)]))
-
-            for art in sub["articles"]:
-                log(f'статья: {sec["slug"]}/{sub["slug"]}/{art["slug"]}')
-                site_figs, _ = prepare_figures(art)
-                art_rel = f'{sec["slug"]}/{sub["slug"]}/{art["slug"]}'
-                if site_figs:
-                    figout = SITE / art_rel / "figures"
-                    figout.mkdir(parents=True, exist_ok=True)
-                    for f in site_figs:
-                        shutil.copy(f, figout / f.name)
-                writer.write_page(
-                    f"{art_rel}/index.html", art["meta"]["title"],
-                    article_content_html(sec, sub, art),
-                    writer.crumbs([("Главная", "index.html"),
-                                   (sec["meta"]["title"], sec_href),
-                                   (sub["meta"]["title"], sub_href),
-                                   (art["meta"]["title"], None)]),
-                )
+        write_group_pages(writer, sec, [("Главная", "index.html")])
 
 
 # ---------------------------------------------------------------- PDF
@@ -443,19 +518,9 @@ def lesc(s):
     return "".join(LATEX_SPECIALS.get(ch, ch) for ch in str(s))
 
 
-def latex_fragments(art):
-    """Блоки статьи → список (заголовок блока, latex-фрагмент)."""
-    _, figdir = prepare_figures(art)
-    frags = []
-    block_meta = art["meta"].get("blocks", {}) or {}
-    for key, fname, btitle in art["blocks"]:
-        bmeta = block_meta.get(key, {}) or {}
-        frags.append((bmeta.get("title", btitle), pandoc_latex(art["dir"] / fname, figdir)))
-    return frags
-
-
 def article_body_latex(art, heading="\\section"):
     meta = art["meta"]
+    _, figdir = prepare_figures(art)
     out = ["\\resetproblems"]
     al = meta.get("authors")
     if al:
@@ -465,15 +530,16 @@ def article_body_latex(art, heading="\\section"):
     desc = meta.get("description")
     if desc:
         out.append(f"\\noindent{{\\itshape {lesc(desc)}}}\\par\\medskip")
-    for btitle, frag in latex_fragments(art):
-        out.append(f"{heading}{{{lesc(btitle)}}}")
-        out.append(frag)
+    block_meta = meta.get("blocks", {}) or {}
+    for key, fname, btitle in art["blocks"]:
+        bmeta = block_meta.get(key, {}) or {}
+        out.append(f'{heading}{{{lesc(bmeta.get("title", btitle))}}}')
+        out.append(pandoc_latex(art["dir"] / fname, figdir, eq_args(art, key)))
     return "\n".join(out)
 
 
 def compile_pdf(tex_source, out_pdf):
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
-    import os
     env = dict(os.environ, TEXINPUTS=f".:{PREAMBLE.parent}:{MACROS.parent}:")
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -506,45 +572,62 @@ def doc_wrap(cls, title, subtitle, body, toc=False):
 """
 
 
+def leaf_groups(node, titles=None):
+    """Группы, непосредственно содержащие статьи, с цепочкой заголовков от node."""
+    titles = titles or []
+    out = []
+    if node["articles"]:
+        out.append((titles, node))
+    for g in node["groups"]:
+        out.extend(leaf_groups(g, titles + [g["meta"]["title"]]))
+    return out
+
+
+def group_body_latex(node):
+    leafs = leaf_groups(node)
+    single = len(leafs) == 1 and leafs[0][1] is node
+    out = []
+    for titles, leaf in leafs:
+        if not single:
+            part_title = " · ".join(titles) if titles else leaf["meta"]["title"]
+            out.append(f"\\part{{{lesc(part_title)}}}")
+        for art in leaf["articles"]:
+            out.append(f'\\chapter{{{lesc(art["meta"]["title"])}}}')
+            out.append(article_body_latex(art, heading="\\section"))
+    return "\n".join(out)
+
+
 def build_pdfs(tree, config):
     pdf_root = SITE / "pdf"
     site_title = config["title"]
 
-    for sec in tree:
-        sec_parts = []
-        for sub in sec["subtopics"]:
-            sub_chapters = []
-            for art in sub["articles"]:
-                body = article_body_latex(art, heading="\\section")
-                # PDF отдельной статьи
-                compile_pdf(
-                    doc_wrap("article", art["meta"]["title"],
-                             f'{sec["meta"]["title"]} · {sub["meta"]["title"]}', body),
-                    pdf_root / sec["slug"] / sub["slug"] / f'{art["slug"]}.pdf',
-                )
-                sub_chapters.append(f'\\chapter{{{lesc(art["meta"]["title"])}}}\n{body}')
-            sub_body = "\n".join(sub_chapters)
-            # PDF подтемы
-            compile_pdf(
-                doc_wrap("report", sub["meta"]["title"], sec["meta"]["title"], sub_body, toc=True),
-                pdf_root / sec["slug"] / f'{sub["slug"]}.pdf',
-            )
-            sec_parts.append((sub["meta"]["title"], sub_body))
-        # PDF раздела
-        sec_body = "\n".join(
-            f"\\part{{{lesc(t)}}}\n{b}" for t, b in sec_parts
-        )
+    def walk(node, parent_titles):
+        # PDF самой группы
+        subtitle = " · ".join(parent_titles) if parent_titles else site_title
         compile_pdf(
-            doc_wrap("report", sec["meta"]["title"], site_title, sec_body, toc=True),
-            pdf_root / f'{sec["slug"]}.pdf',
+            doc_wrap("report", node["meta"]["title"], subtitle,
+                     group_body_latex(node), toc=True),
+            pdf_root / f'{node["rel"]}.pdf',
         )
+        for art in node["articles"]:
+            compile_pdf(
+                doc_wrap("article", art["meta"]["title"],
+                         " · ".join(parent_titles + [node["meta"]["title"]]),
+                         article_body_latex(art, heading="\\section")),
+                pdf_root / f'{art["rel"]}.pdf',
+            )
+        for g in node["groups"]:
+            walk(g, parent_titles + [node["meta"]["title"]])
 
-    # Весь учебник
+    for sec in tree:
+        walk(sec, [])
+
+    # Весь учебник: части = цепочки «Раздел · … · Подтема»
     book = []
     for sec in tree:
-        for sub in sec["subtopics"]:
-            book.append(f'\\part{{{lesc(sec["meta"]["title"])} · {lesc(sub["meta"]["title"])}}}')
-            for art in sub["articles"]:
+        for titles, leaf in leaf_groups(sec, [sec["meta"]["title"]]):
+            book.append(f'\\part{{{lesc(" · ".join(titles))}}}')
+            for art in leaf["articles"]:
                 book.append(f'\\chapter{{{lesc(art["meta"]["title"])}}}')
                 book.append(article_body_latex(art, heading="\\section"))
     compile_pdf(

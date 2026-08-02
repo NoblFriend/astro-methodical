@@ -95,13 +95,70 @@ function Div(el)
   end
 end
 
--- Подстановка расширений и абсолютного пути к скомпилированным картинкам (для LaTeX).
+-- Финальный проход: пути картинок + нумерация формул.
+--
+-- Метаданные от сборщика:
+--   eqprefix — иерархический префикс статьи, например "А.1.2.1"
+--   eqstart  — сколько выключных формул было в предыдущих блоках статьи
+--   eqlabels — карта "label=номер|label=номер" для \label / \eqref
 function Pandoc(doc)
-  local figdir = nil
-  if doc.meta.figdir then
-    figdir = pandoc.utils.stringify(doc.meta.figdir)
+  local function meta_str(key)
+    return doc.meta[key] and pandoc.utils.stringify(doc.meta[key]) or nil
   end
+
+  local figdir = meta_str("figdir")
+  local prefix = meta_str("eqprefix")
+  local start = tonumber(meta_str("eqstart") or "0") or 0
+  local labels = {}
+  for pair in (meta_str("eqlabels") or ""):gmatch("[^|]+") do
+    local k, v = pair:match("^(.-)=(.*)$")
+    if k then labels[k] = v end
+  end
+
+  local function subst_refs(tex)
+    tex = tex:gsub("\\eqref%{([^}]*)%}", function(l)
+      return "(\\text{" .. (labels[l] or "??") .. "})"
+    end)
+    tex = tex:gsub("\\ref%{([^}]*)%}", function(l)
+      return "\\text{" .. (labels[l] or "??") .. "}"
+    end)
+    return tex
+  end
+
+  local eqn = 0
   doc.blocks = doc.blocks:walk{
+    Math = function(m)
+      if m.mathtype == "DisplayMath" then
+        eqn = eqn + 1
+        local tex = subst_refs(m.text:gsub("%s*\\label%{[^}]*%}", ""))
+        if prefix then
+          local tag = prefix .. "." .. tostring(start + eqn)
+          if is_latex() then
+            return pandoc.RawInline(
+              "latex",
+              "\\begin{equation*}" .. tex .. "\\tag{" .. tag .. "}\\end{equation*}")
+          end
+          m.text = tex .. "\\tag{" .. tag .. "}"
+          return m
+        end
+        m.text = tex
+        return m
+      end
+      m.text = subst_refs(m.text)
+      return m
+    end,
+    RawInline = function(r)
+      -- \eqref{...} прямо в тексте (вне математики)
+      if r.format == "tex" or r.format == "latex" then
+        local l = r.text:match("^\\eqref%{([^}]*)%}$")
+        if l and labels[l] then
+          if is_latex() then
+            return pandoc.RawInline("latex", "(" .. labels[l] .. ")")
+          end
+          return pandoc.Str("(" .. labels[l] .. ")")
+        end
+      end
+    end,
     Image = function(img)
       local src = img.src
       local has_ext = src:match("%.%w+$") ~= nil
