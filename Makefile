@@ -20,6 +20,9 @@ search: site          ## добавить поисковый индекс (ну�
 serve:                ## локальный предпросмотр на http://localhost:8000
 	python3 -m http.server 8000 -d site
 
+watch: deps           ## живой предпросмотр на http://localhost:8765 (порт: make watch PORT=...)
+	$(PY) dev.py
+
 clean:
 	rm -rf site .cache
 

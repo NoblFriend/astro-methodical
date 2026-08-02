@@ -145,6 +145,23 @@
     reclose = [];
   });
 
+  /* ---------- Живой предпросмотр (make watch) ---------- */
+  if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    var lastStamp = null;
+    var poll = setInterval(function () {
+      fetch("/__stamp", { cache: "no-store" })
+        .then(function (r) {
+          if (!r.ok) throw new Error();
+          return r.text();
+        })
+        .then(function (s) {
+          if (lastStamp && s !== lastStamp) location.reload();
+          lastStamp = s;
+        })
+        .catch(function () { clearInterval(poll); });
+    }, 500);
+  }
+
   /* ---------- Поиск (Pagefind, если собран) ---------- */
   function initSearch() {
     var box = document.getElementById("search-box");

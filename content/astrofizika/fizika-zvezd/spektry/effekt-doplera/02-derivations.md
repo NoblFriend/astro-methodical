@@ -17,8 +17,10 @@ $$
 $$
 \lambda = \lambda_0 \left(1 + \frac{v_r}{c}\right)
 \qquad\Longrightarrow\qquad
-\frac{\Delta \lambda}{\lambda_0} = \frac{v_r}{c}.
+\frac{\Delta \lambda}{\lambda_0} = \frac{v_r}{c},
 $$
+
+то есть в точности формула $\eqref{eq:doppler-classic}$ из блока теории.
 
 ::: note
 В этом выводе скорость входит только через лишний путь вдоль луча зрения —

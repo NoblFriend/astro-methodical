@@ -15,6 +15,7 @@
 ::: {.formula-box caption="Классическая формула Доплера ($v_r \ll c$)"}
 $$
 \frac{\Delta \lambda}{\lambda_0} = \frac{\lambda - \lambda_0}{\lambda_0} = \frac{v_r}{c}
+\label{eq:doppler-classic}
 $$
 :::
 

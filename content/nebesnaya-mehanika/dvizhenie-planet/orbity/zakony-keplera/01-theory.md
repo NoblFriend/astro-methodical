@@ -15,6 +15,7 @@ $$
 \frac{T_1^2}{T_2^2} = \frac{a_1^3}{a_2^3}
 \qquad\Longleftrightarrow\qquad
 T^2 = a^3 \quad [T\ \text{в годах},\ a\ \text{в}\ \au]
+\label{eq:kepler3}
 $$
 :::
 
