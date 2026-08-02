@@ -330,6 +330,23 @@ details.solution summary {
   margin-top: 0.4rem;
 }
 
+/* ============ Сноски ============ */
+.footnotes {
+  margin-top: 1.6rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+.footnotes hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  width: 8rem;
+  margin: 0 0 0.5rem;
+}
+.footnotes ol { padding-left: 1.3rem; margin: 0.3rem 0; }
+.footnotes p { margin: 0.25rem 0; }
+a.footnote-ref { text-decoration: none; font-weight: 700; }
+a.footnote-back { text-decoration: none; margin-left: 0.25rem; }
+
 /* ============ Карточки на индексных страницах ============ */
 .card-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.9rem; }
 .card {

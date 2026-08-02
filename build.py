@@ -416,7 +416,9 @@ def article_content_html(art):
 
     block_authors = art["meta"].get("blocks", {}) or {}
     for key, fname, btitle in art["blocks"]:
-        fragment = pandoc_html(art["dir"] / fname, eq_args(art, key))
+        # id-prefix разводит якоря сносок и заголовков разных блоков
+        fragment = pandoc_html(art["dir"] / fname,
+                               eq_args(art, key) + ["--id-prefix", f"{key}-"])
         bmeta = block_authors.get(key, {}) or {}
         btitle_final = bmeta.get("title", btitle)
         ba = authors_line(bmeta.get("authors"))
