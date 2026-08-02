@@ -48,10 +48,20 @@
     var hidden = prefs.hidden || [];
     var order = (prefs.order || []).slice();
 
-    // порядок: сначала сохранённые ключи (существующие на странице), потом остальные как есть
+    // Сохранённый порядок чистим от исчезнувших блоков, а блоки, которых
+    // в настройках ещё нет (новые/переименованные), вставляем не в конец,
+    // а на их каноническое место.
     var keys = sections.map(function (s) { return s.dataset.block; });
     order = order.filter(function (k) { return keys.indexOf(k) !== -1; });
-    keys.forEach(function (k) { if (order.indexOf(k) === -1) order.push(k); });
+    keys.forEach(function (k) {
+      if (order.indexOf(k) !== -1) return;
+      var ci = keys.indexOf(k);
+      var insertAt = order.length;
+      for (var j = 0; j < order.length; j++) {
+        if (keys.indexOf(order[j]) > ci) { insertAt = j; break; }
+      }
+      order.splice(insertAt, 0, k);
+    });
 
     function byKey(k) {
       return sections.filter(function (s) { return s.dataset.block === k; })[0];
