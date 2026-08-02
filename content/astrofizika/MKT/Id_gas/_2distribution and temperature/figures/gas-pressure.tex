@@ -1,0 +1,77 @@
+% Волновые фронты движущегося источника.
+% Компилируется отдельно: xelatex doppler-shift.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{patterns,arrows.meta,decorations.markings,calc}
+
+\begin{document}
+\begin{tikzpicture}[
+    >={Stealth[length=2.4mm]},
+    % --- стили (легко перекрасить под макет методички) ---
+    traj/.style   = {thin, postaction={decorate},
+                     decoration={markings, mark=at position 0.5 with {\arrow{Stealth[length=2mm]}}}},
+    vel/.style    = {->, very thick, blue!55!black},
+    comp/.style   = {->, semithick, blue!55!black!75},
+    helper/.style = {densely dashed, gray!70},
+    transfer/.style={->, line width=1.1pt, red!70!black},
+  ]
+
+  % ================= стенка =================
+  \fill[pattern=north east lines, pattern color=gray!80]
+        (5,-0.8) rectangle (5.42,4.8);
+  \draw[very thick] (5,-0.8) -- (5,4.8);
+  \node[rotate=-90, gray!30!black] at (5.75,4.0) {стенка};
+
+  % ================= оси =================
+  \draw[->, semithick] (0.4,-0.45) -- (1.5,-0.45) node[below] {$x$};
+  \draw[->, semithick] (0.4,-0.45) -- (0.4,0.65)  node[left]  {$y$};
+
+  % ================= траектория =================
+  \coordinate (A) at (1.0,0);   % старт (до удара)
+  \coordinate (P) at (5,2);     % точка удара
+  \coordinate (B) at (1.0,4);   % конец (после удара)
+
+  \draw[traj] (A) -- (P);
+  \draw[traj] (P) -- (B);
+
+  % нормаль к стенке в точке удара + равные углы
+  \draw[helper] (1.5,2) -- (P);
+  \draw[gray!30!black] (P) ++(180:0.85) arc[start angle=180, end angle=206.6, radius=0.85];
+  \node[gray!30!black] at ($(P)+(196:1.12)$) {$\alpha$};
+  \draw[gray!30!black] (P) ++(153.4:0.85) arc[start angle=153.4, end angle=180, radius=0.85];
+  \node[gray!30!black] at ($(P)+(166:1.12)$) {$\alpha$};
+
+  % ================= молекула до удара =================
+  \coordinate (M1) at (2.2,0.6);
+  \fill (M1) circle (0.085);
+  \node[above left=2pt] at (M1) {$m_0$};
+
+  % скорость и её разложение
+  \coordinate (V1)  at ($(M1)+(1.61,0.805)$);   % конец вектора v
+  \coordinate (V1x) at ($(M1)+(1.61,0)$);
+  \coordinate (V1y) at ($(M1)+(0,0.805)$);
+  \draw[helper] (V1x) -- (V1) -- (V1y);
+  \draw[comp] (M1) -- (V1x) node[below=1pt] {$v_x$};
+  \draw[comp] (M1) -- (V1y) node[left=1pt]  {$v_y$};
+  \draw[vel]  (M1) -- (V1)  node[pos=0.28, above=4pt] {$\vec v$};
+
+  % ================= молекула после удара =================
+  \coordinate (M2) at (3.2,2.9);
+  \fill (M2) circle (0.085);
+
+  \coordinate (V2)  at ($(M2)+(-1.61,0.805)$);  % конец вектора v'
+  \coordinate (V2x) at ($(M2)+(-1.61,0)$);
+  \coordinate (V2y) at ($(M2)+(0,0.805)$);
+  \draw[helper] (V2x) -- (V2) -- (V2y);
+  \draw[comp] (M2) -- (V2x) node[below=1pt] {$v'_x=-v_x$};
+  \draw[comp] (M2) -- (V2y) node[right=1pt] {$v'_y=v_y$};
+  \draw[vel]  (M2) -- (V2)  node[pos=0.28, above=4pt] {$\vec v\,'$};
+
+  % ================= импульс, переданный стенке =================
+  \draw[transfer] (P) -- ++(1.15,0)
+        node[right=2pt] {$\Delta p = 2m_0 v_x$};
+
+\end{tikzpicture}
+\end{document}
