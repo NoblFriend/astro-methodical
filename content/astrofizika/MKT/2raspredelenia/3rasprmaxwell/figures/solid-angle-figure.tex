@@ -1,0 +1,63 @@
+% Иллюстрация элементарного телесного угла:
+% площадка на единичной сфере между theta, theta+dtheta и phi, phi+dphi
+% со сторонами dtheta и sin(theta) dphi.
+% Компиляция: pdflatex solid-angle-figure.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{arrows.meta,calc}
+
+\begin{document}
+\begin{tikzpicture}[
+    >={Stealth[length=2.4mm]},
+    axis/.style   = {->, semithick},
+    constr/.style = {thin, gray!55},
+    patch/.style  = {semithick, red!70!black, fill=red!18},
+  ]
+  % проекция: sx = 2.6 sin(t)sin(p);  sy = 2.6(0.971 cos(t) - 0.238 sin(t)cos(p))
+
+  % ================= сфера =================
+  \draw[semithick] (0,0) circle (2.6);
+  % экватор: передняя половина сплошная, задняя пунктиром
+  \draw[thin, domain=-90:90, samples=60]
+        plot ({2.6*sin(\x)}, {-0.619*cos(\x)});
+  \draw[thin, dashed, domain=90:270, samples=60]
+        plot ({2.6*sin(\x)}, {-0.619*cos(\x)});
+  % полярная ось
+  \draw[dashed, thin] (0,0) -- (0,2.5246);
+  \draw[axis] (0,2.5246) -- (0,3.35) node[above] {$z$};
+  \node[gray!30!black] at (-0.24,-0.18) {$O$};
+
+  % ================= построения: меридианы и параллели =================
+  % меридианы phi = 20 и phi = 48
+  \draw[constr, domain=0:90, samples=50]
+        plot ({0.8892*sin(\x)}, {2.5246*cos(\x)-0.5816*sin(\x)});
+  \draw[constr, domain=0:90, samples=50]
+        plot ({1.9318*sin(\x)}, {2.5246*cos(\x)-0.4139*sin(\x)});
+  % параллели theta = 50 и theta = 68
+  \draw[constr, domain=14:85, samples=60]
+        plot ({1.992*sin(\x)}, {1.6234-0.4740*cos(\x)});
+  \draw[constr, domain=14:85, samples=60]
+        plot ({2.410*sin(\x)}, {0.9467-0.5736*cos(\x)});
+
+  % ================= площадка dOmega =================
+  \draw[patch] (0.681,1.178) -- (1.480,1.306) -- (1.791,0.563) -- (0.824,0.407) -- cycle;
+
+  % радиус к площадке и угол theta
+  \draw[thin] (0,0) -- (0.681,1.178);
+  \draw[gray!30!black] (0,0) ++(90:0.55) arc[start angle=90, end angle=60, radius=0.55];
+  \node[gray!30!black] at (0.24,0.98) {$\theta$};
+
+  % dphi на экваторе
+  \draw[red!70!black, semithick, domain=20:48, samples=20]
+        plot ({2.6*sin(\x)}, {-0.619*cos(\x)});
+  \node[red!70!black] at (1.47,-0.78) {$\mathrm{d}\varphi$};
+
+  % ================= подписи сторон =================
+  \node[red!70!black] at (2.02,0.95) {$\mathrm{d}\theta$};
+  \node[red!70!black, anchor=west] at (2.78,0.20) {$\sin\theta\,\mathrm{d}\varphi$};
+  \draw[gray!70, thin] (2.72,0.21) -- (1.55,0.51);
+
+\end{tikzpicture}
+\end{document}

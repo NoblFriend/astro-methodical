@@ -112,7 +112,7 @@ $$
 \langle x^{2n} \rangle=\sigma^{2n}(2n-1)!!
 $$
 На самом деле мы научились считать интеграл $\eqref{intxngauss}$ для любых $n$:
-$$
+$$\label{intxngaussgotov}
 \langle x^n \rangle=\int\limits_{-\infty}^{\infty} \frac{x^{2n}}{\sqrt{2\pi \sigma^2}}e^{-\frac{x^2}{2\sigma^2}}=\sigma^{2n}(2n-1)!!
 $$
 :::
