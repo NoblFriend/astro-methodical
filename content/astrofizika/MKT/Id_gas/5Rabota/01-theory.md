@@ -103,7 +103,7 @@ $$
 
 ::: {.formula-box caption="Формула теплоемкости как функция макроскопических параметров системы"}
 $$ \label{CUTP}
-С=\dv{U}{T}+P\frac{\dd V}{\dd T}
+C=\dv{U}{T}+P\frac{\dd V}{\dd T}
 $$
 :::
 
