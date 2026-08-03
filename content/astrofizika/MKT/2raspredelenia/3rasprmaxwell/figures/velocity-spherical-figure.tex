@@ -1,0 +1,55 @@
+% Иллюстрация к переходу в сферические координаты в пространстве скоростей:
+% вектор скорости, полярный угол theta от оси v_z, азимут phi в плоскости v_x v_y.
+% Компиляция: pdflatex velocity-spherical-figure.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{arrows.meta,calc}
+
+\begin{document}
+\begin{tikzpicture}[
+    >={Stealth[length=2.4mm]},
+    axis/.style   = {->, semithick},
+    helper/.style = {densely dashed, gray!70},
+    vel/.style    = {->, very thick, blue!55!black},
+  ]
+
+  % v = 3.6, theta = 48 (от оси v_z), phi = 55 (от оси v_x к v_y)
+  \coordinate (O)  at (0,0);
+  \coordinate (P)  at (0.897,1.585);    % конец вектора
+  \coordinate (Pp) at (0.897,-0.824);   % проекция на плоскость v_x v_y
+
+  % ================= оси =================
+  \draw[axis] (O) -- (3.6,0)       node[below right=-2pt] {$y$};
+  \draw[axis] (O) -- (0,3.4)       node[above] {$z$};
+  \draw[axis] (O) -- (-2.19,-1.40) node[below left=-2pt] {$x$};
+  \node[gray!30!black] at (-0.24,0.20) {$O$};
+
+  % ================= построения =================
+  \draw[helper] (P) -- (Pp);                 % вертикаль к плоскости
+  \draw[helper] (O) -- (Pp);                 % горизонтальная проекция v
+  \draw[helper] (Pp) -- (2.191,0);           % параллелограмм в плоскости
+  \draw[helper] (Pp) -- (-1.294,-0.824);
+  \draw[helper] (P) -- (0,2.409);            % высота на ось v_z
+  \fill[gray!40!black] (Pp) circle (0.045);
+
+  % ================= компоненты скорости на осях =================
+  \draw[thin] (2.191,-0.06) -- (2.191,0.06);
+  \draw[thin] (-0.06,2.409) -- (0.06,2.409);
+  \draw[thin] (-1.326,-0.773) -- (-1.262,-0.875);
+  \node at (2.34,-0.38) {$v_y$};
+  \node[anchor=east] at (-0.14,2.409) {$v_z$};
+  \node at (-1.29,-1.25) {$v_x$};
+
+  % ================= вектор скорости =================
+  \draw[vel] (O) -- (P) node[right=4pt] {$\vec v$};
+
+  % ================= углы =================
+  \draw[gray!30!black] (O) ++(90:0.8) arc[start angle=90, end angle=60.5, radius=0.8];
+  \node[gray!30!black] at (0.30,1.06) {$\theta$};
+  \draw[gray!30!black] (O) ++(212.5:0.75) arc[start angle=212.5, end angle=317.4, radius=0.75];
+  \node[gray!30!black] at (-0.09,-1.16) {$\varphi$};
+
+\end{tikzpicture}
+\end{document}

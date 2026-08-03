@@ -2,7 +2,7 @@
 
 ::: {.definition title="Температура"}
  Температуру $T$ газа определим согласно уравнению:
-    $$ 
+    $$ \label{tempdef}
         \left<\frac{mv^2}{2}\right>=\frac{3}{2}kT \text{ где } k \approx 1.38 \times 10^{-23} \text{Дж/К}
         \label{2.19}
     $$
