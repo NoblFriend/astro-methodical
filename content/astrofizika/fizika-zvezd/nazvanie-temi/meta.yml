@@ -1,0 +1,10 @@
+title: О теме
+description: О теме
+authors:
+  - Иван Игнатьев
+order: 10
+blocks:
+  theory:
+    authors: [Иван Игнатьев]
+  methods:
+    authors: [Иван Игнатьев]
