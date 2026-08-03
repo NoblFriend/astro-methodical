@@ -1,0 +1,57 @@
+% Иллюстрация к теме «внутренняя энергия идеального газа»:
+% степени свободы двухатомной молекулы — поступательное движение центра масс
+% и вращение вокруг двух взаимно перпендикулярных осей (y и z).
+% Компиляция: pdflatex diatomic-molecule-figure.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{arrows.meta,calc}
+
+\begin{document}
+\begin{tikzpicture}[
+    >={Stealth[length=2.4mm]},
+    % --- стили в духе первого рисунка ---
+    axis/.style = {->, semithick},
+    vel/.style  = {->, very thick, blue!55!black},
+    rot/.style  = {->, line width=1pt, red!70!black},
+    note/.style = {gray!30!black, font=\small},
+  ]
+
+  % ================= оси =================
+  % молекула лежит вдоль оси x
+  \draw[axis] (-2.5,0) -- (3.3,0) node[below right=-2pt] {$x$};
+  \draw[axis] (0,-0.7) -- (0,2.95) node[above] {$y$};
+  \draw[axis] (0,0) -- (-2.36,-1.50) node[below left=-2pt] {$z$};
+
+  % ================= вращение вокруг оси y =================
+  % эллипс с разрывом сверху (там ось проходит «перед» дугой)
+  \draw[rot] ($(0,2.05)+(100:{0.8} and {0.27})$)
+      arc[start angle=100, end angle=440, x radius=0.8, y radius=0.27];
+  \node[red!70!black] at (1.05,2.05) [right] {$\omega_y$};
+
+  % ================= вращение вокруг оси z =================
+  \begin{scope}[rotate around={122.5:(-1.60,-1.02)}]
+    \draw[rot] ($(-1.60,-1.02)+(110:{0.78} and {0.26})$)
+        arc[start angle=110, end angle=440, x radius=0.78, y radius=0.26];
+  \end{scope}
+  \node[red!70!black] at (-1.02,-1.55) [right] {$\omega_z$};
+
+  % ================= молекула =================
+  % связь
+  \draw[line width=4.5pt, gray!55, line cap=round] (-1.0,0) -- (1.0,0);
+  % атомы
+  \shade[ball color=gray!45] (-1.1,0) circle (0.45);
+  \draw[gray!60, thin] (-1.1,0) circle (0.45);
+  \shade[ball color=gray!45] (1.1,0) circle (0.45);
+  \draw[gray!60, thin] (1.1,0) circle (0.45);
+
+  % ================= центр масс и его скорость =================
+  \fill (0,0) circle (0.06);
+  \draw[gray!70, thin] (0.62,-0.78) -- (0.07,-0.09);
+  \node[note, anchor=west] at (0.58,-0.85) {центр масс};
+
+  \draw[vel] (0,0) -- (1.05,1.35) node[above right=1pt] {$\vec v$};
+
+\end{tikzpicture}
+\end{document}

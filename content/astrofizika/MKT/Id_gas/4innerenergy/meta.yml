@@ -1,0 +1,10 @@
+title: Фнутреняя энергия
+description: О понятии внутренней энергии и степенях свободы.
+authors:
+  - Василий Муратов
+order: 10
+blocks:
+  theory:
+    authors: [Василий Муратов]
+  methods:
+    authors: [Василий Муратов]
