@@ -43,7 +43,7 @@ $$
 U=-\int_0^M\frac{GqM^2dq}{xR}=-\frac{GM^2}{R}\int_0^1\frac{q\,dq}{x}
 $$
 
-::: {.formula title="Гравитационная энергия звезды"}
+::: {.formula-box caption="Гравитационная энергия звезды"}
 $$
 U=-\omega\frac{GM^2}{R}, \qquad \omega=\int_0^1\frac{q\,dq}{x}
 $$
@@ -88,7 +88,7 @@ P_0=\int_0^1\frac{GM^2q\,dq}{4\pi x^4R^4}
 =\frac{GM^2}{4\pi R^4}\int_0^1\frac{q\,dq}{x^4}
 $$
 
-::: {.formula title="Давление в центре звезды"}
+::: {.formula-box caption="Давление в центре звезды"}
 $$
 P_0=p\frac{GM^2}{4\pi R^4}, \qquad
 p=\int_0^1\frac{q\,dq}{x^4}
@@ -151,7 +151,7 @@ $$
 3kT_mN=\frac{3MRRT_m}{\mu}=\omega\frac{GM^2}{R}
 $$
 
-::: {.formula title="Средняя температура звезды"}
+::: {.formula-box caption="Средняя температура звезды"}
 $$
 T_m=\frac{\omega\mu}{3R}\frac{GM}{R}
 $$

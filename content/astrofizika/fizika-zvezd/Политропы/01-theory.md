@@ -50,7 +50,7 @@ $$
 
 Итого, получаем:
 
-::: {.formula title="Уравнение Лейна-Эмдена в безразмерной форме"}
+::: {.formula-box caption="Уравнение Лейна-Эмдена в безразмерной форме"}
 $$
 \frac{1}{\xi^2}\frac{d}{d\xi}\left(\xi^2\frac{d\theta}{d\xi}\right)+\theta^n=0
 $$
