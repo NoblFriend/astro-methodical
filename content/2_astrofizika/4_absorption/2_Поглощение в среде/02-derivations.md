@@ -87,7 +87,7 @@ $$
 $$
 
 $$
-\lambda \cdot k = \int_0^{+\infin} \tau \cdot e^{- \tau} d \tau = \tau \cdot \int_0^{+\infty} e^{- \tau} d \tau - \int_0^{+\infty} \int_0^{+\infty} e^{- \tau} d \tau
+\lambda \cdot k = \int_0^{+\infty} \tau \cdot e^{- \tau} d \tau = \tau \cdot \int_0^{+\infty} e^{- \tau} d \tau - \int_0^{+\infty} \int_0^{+\infty} e^{- \tau} d \tau
 $$
 
 $$
