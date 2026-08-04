@@ -7,6 +7,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<script>
+/* Тема применяется до отрисовки, чтобы страница не мигала светлым.
+   В localStorage лежит "dark" | "light"; пусто — по системной настройке. */
+(function () {
+  try {
+    var t = localStorage.getItem("metod-theme");
+    if (t === "dark" || (t !== "light" && t !== "" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="{{root}}/assets/style.css">
 <script>
 window.MathJax = {

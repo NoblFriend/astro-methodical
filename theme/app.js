@@ -4,23 +4,23 @@
 
   var ROOT = document.documentElement.getAttribute("data-root") || ".";
 
-  /* ---------- Тема ---------- */
+  /* ---------- Тема ----------
+     Начальное применение — инлайн-скриптом в <head> (до отрисовки).
+     Хранится "dark" | "light" — раньше светлая писалась пустой строкой
+     и не переживала переход на другую страницу. */
   var THEME_KEY = "metod-theme";
   function applyTheme(t) {
-    if (t) document.documentElement.setAttribute("data-theme", t);
+    if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
     else document.documentElement.removeAttribute("data-theme");
   }
-  var savedTheme = localStorage.getItem(THEME_KEY);
-  if (savedTheme) applyTheme(savedTheme);
-  else if (window.matchMedia("(prefers-color-scheme: dark)").matches) applyTheme("dark");
 
   document.addEventListener("DOMContentLoaded", function () {
     var btn = document.getElementById("theme-toggle");
     if (btn) {
       btn.addEventListener("click", function () {
-        var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "" : "dark";
-        applyTheme(cur);
-        localStorage.setItem(THEME_KEY, cur);
+        var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        applyTheme(next);
+        localStorage.setItem(THEME_KEY, next);
       });
     }
     initBlockPanel();
