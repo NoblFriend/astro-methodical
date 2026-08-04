@@ -1,0 +1,44 @@
+% Иллюстрация к выводу статвеса бозонов:
+% N бозонов в Z ячейках, разделённых Z-1 перегородками; заполнение произвольное.
+% Компиляция: pdflatex bose-cells-figure.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{arrows.meta,decorations.pathreplacing}
+
+\begin{document}
+\begin{tikzpicture}[
+    note/.style = {gray!30!black},
+    ptr/.style  = {gray!70, thin},
+  ]
+
+  % ================= ячейки =================
+  % дно
+  \draw[semithick] (0,0) -- (10,0);
+  % внешние стенки (не считаются перегородками)
+  \draw[line width=1.2pt] (0,0) -- (0,1.12);
+  \draw[line width=1.2pt] (10,0) -- (10,1.12);
+  % Z-1 = 5 перегородок
+  \foreach \x in {1.667,3.333,5,6.667,8.333} {
+    \draw[semithick] (\x,0) -- (\x,1.0);
+  }
+
+  % ================= бозоны: заполнение произвольное =================
+  % занятость ячеек: 3, 0, 2, 1, 0, 2  (N = 8)
+  \foreach \x in {0.40,0.84,1.28, 3.90,4.45, 5.83, 8.90,9.45} {
+    \shade[ball color=gray!45] (\x,0.23) circle (0.21);
+    \draw[gray!60, thin] (\x,0.23) circle (0.21);
+  }
+
+  % ================= подписи =================
+  \node[note] at (1.5,1.9) {$N$ бозонов};
+  \draw[ptr] (1.36,1.60) -- (0.86,0.52);
+  \node[note] at (5.9,1.9) {$Z-1$ перегородок};
+  \draw[ptr] (5.42,1.66) -- (5.02,1.06);
+
+  \draw[decorate, decoration={brace, mirror, amplitude=6pt}]
+        (0,-0.28) -- (10,-0.28) node[midway, below=8pt] {$Z$ ячеек};
+
+\end{tikzpicture}
+\end{document}
