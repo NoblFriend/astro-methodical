@@ -125,17 +125,23 @@ $$\label{2.97}
     \dv{f_v(v)}{v}=B\qty(-\frac{mv^3}{kT}\exp(-\frac{mv^2}{2kT})+2\exp(-\frac{mv^2}{2kT})v)=0 
 $$
 Где $B=4\pi\qty(\frac{m}{2\pi kT})^{\frac{3}{2}}$. Тогда, наиболее вероятная скорость $v_{\text{н.в.}}$.:
+
+::: {.formula-box caption="Наиболее по модулю скорость частиц газа"}
 $$\label{2.98}
     v_{\text{н.в.}}=\sqrt{\frac{2kT}{m}} 
 $$
+:::
 Определим средний модуль скорости молекул $\langle v \rangle$ (он получается интегрированием $v$ с плотностью вероятности, см. [плотность вероятности](@/astrofizika/MKT/Id_gas/distribution-and-temperature)):
 $$\label{2.99}
     \langle v \rangle=\int_{0}^{\infty} \! f_v(v) v \dd v = \frac{B}{2} \int_{0}^{\infty} \! \exp(-\frac{mv^2}{2kT}) v^2 \dd v^2= \frac{B}{2} \qty(\frac{2kT}{m})^2 \eval{e^{-x}(-x-1)}_{0}^{\infty}
 $$
 Где $x=\frac{mv^2}{2kT}$. Тогда:
+
+::: {.formula-box caption="Средняя по модулю скорость частиц газа"}
 $$\label{2.100}
     \langle v \rangle=\sqrt{\frac{8 k T}{\pi m}}
 $$
+:::
 Наконец можно вычислить среднеквадратичную скорость для проверки нашего определения температуры. Для этого используем $\eqref{sredznach}$, и вычислим среднеквадратичную скорость вдоль некоторого направления:
 $$\label{2.101}
     \langle v_i^2 \rangle =\sqrt{\frac{m}{2\pi k T}} \int\limits_{-\infty}^{\infty}\! \exp(-\frac{mv_i^2}{2kT}) v_i^2 \dd v_i =\frac{1}{\pi}\sqrt{\frac{m}{2 k T}}\qty(\frac{2kT}{m})^{\frac{3}{2}}\int\limits_{-\infty}^{\infty}\! \exp(-\xi^2)\xi^2 \dd \xi =\frac{kT}{m}
