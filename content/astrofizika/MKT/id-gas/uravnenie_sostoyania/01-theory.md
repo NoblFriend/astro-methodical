@@ -5,7 +5,7 @@ $$ \label{baza}
 P=nkT 
 $$
 :::
-Здесь $n$ это концентрация, $T$ температура, $k$ постоянная Больцмана (см. [Параметры газа](@/astrofizika/MKT/1Id_gas/1id-gas-definitions), [Распределения и температура](@/astrofizika/MKT/1Id_gas/2distribution-and-temperature))
+Здесь $n$ это концентрация, $T$ температура, $k$ постоянная Больцмана (см. [Параметры газа](@/astrofizika/MKT/id-gas/id-gas-definitions), [Распределения и температура](@/astrofizika/MKT/id-gas/distribution-and-temperature))
 Это уравнение можно записать в другой удобной форме. Вводится универсальная газовая постоянная. 
 
 ::: {.definition title="Универсальная газовая постоянная"}

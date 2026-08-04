@@ -154,9 +154,18 @@ def load_node_meta(dirpath, fallback_title):
     metafile = dirpath / "_meta.yml"
     meta = read_yaml(metafile) if metafile.exists() else {}
     meta.setdefault("title", fallback_title)
-    meta.setdefault("order", 999)
+    meta.setdefault("order", default_order(metafile.parent.name))
     meta.setdefault("description", "")
     return meta
+
+
+ORDER_PREFIX_RE = re.compile(r"^(\d+)")
+
+
+def default_order(dirname):
+    """Порядок по умолчанию: числовой префикс имени папки («2raspredelenia» → 2)."""
+    m = ORDER_PREFIX_RE.match(dirname)
+    return int(m.group(1)) if m else 999
 
 
 def load_article(art_dir):
@@ -165,7 +174,7 @@ def load_article(art_dir):
         if field not in meta:
             warn(f"{art_dir}: в meta.yml нет поля «{field}»")
             meta.setdefault(field, art_dir.name)
-    meta.setdefault("order", 999)
+    meta.setdefault("order", default_order(art_dir.name))
     blocks = []
     for key, fname, btitle in BLOCK_DEFS:
         if (art_dir / fname).exists():
@@ -200,6 +209,18 @@ def load_group(dirpath):
                 node["groups"].append(sub)
     node["groups"].sort(key=lambda g: (g["meta"]["order"], g["meta"]["title"]))
     node["articles"].sort(key=lambda a: (a["meta"]["order"], a["meta"]["title"]))
+    # Одинаковый order у соседей — порядок фактически алфавитный, а нумерация
+    # формул может «поплыть» при переименовании; лучше задать явно.
+    for kind in ("groups", "articles"):
+        prev = None
+        for child in node[kind]:
+            o = child["meta"]["order"]
+            if prev is not None and o == prev["meta"]["order"]:
+                warn(f'{dirpath.relative_to(CONTENT) if dirpath != CONTENT else "content"}: '
+                     f'у «{prev["meta"]["title"]}» и «{child["meta"]["title"]}» '
+                     f"одинаковый order={o} — порядок между ними алфавитный, "
+                     f"задайте разные order в meta")
+            prev = child
     return node
 
 
