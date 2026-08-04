@@ -1,0 +1,55 @@
+% Иллюстрация к выводу формулы Стирлинга:
+% сумма ln k · 1 как сумма площадей прямоугольников под графиком y = ln x,
+% приближённо равная интегралу от 1 до n.
+% Компиляция: pdflatex stirling-riemann-figure.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{arrows.meta}
+
+\begin{document}
+\begin{tikzpicture}[
+    >={Stealth[length=2.4mm]},
+    axis/.style  = {->, semithick},
+    curve/.style = {very thick, blue!55!black},
+    rect/.style  = {semithick, red!70!black, fill=red!12},
+  ]
+  % масштаб по y: 1.6*ln(x)
+
+  % ================= прямоугольники: [k, k+1] высоты ln k =================
+  % (прямоугольник для k=1 имеет высоту ln 1 = 0 и не виден)
+  \draw[rect] (2,0) rectangle (3,1.109);
+  \draw[rect] (3,0) rectangle (4,1.758);
+  \draw[rect] (4,0) rectangle (5,2.218);
+  \draw[rect] (5,0) rectangle (6,2.575);
+  \draw[rect] (6,0) rectangle (7,2.867);
+  \draw[rect] (7,0) rectangle (8,3.113);
+  \node[red!70!black] at (4.5,1.15) {$\ln k$};
+
+  % ================= оси =================
+  \draw[axis] (-0.5,0) -- (9.4,0) node[below right=-2pt] {$x$};
+  \draw[axis] (0,-0.6) -- (0,3.9) node[above] {$y$};
+
+  % отметки на оси x
+  \draw (1,-0.07) -- (1,0.07);
+  \node[below] at (1.07,-0.19) {$1$};
+  \foreach \x/\lbl in {2/2, 3/3, 4/k, 5/k+1, 7/n-1, 8/n} {
+    \draw (\x,-0.07) -- (\x,0.07);
+    \node[below] at (\x,-0.19) {$\lbl$};
+  }
+  \draw (6,-0.07) -- (6,0.07);
+  \node[below] at (6,-0.19) {$\dots$};
+
+  % ================= график логарифма =================
+  \draw[curve, domain=0.85:8.7, smooth, samples=120]
+        plot (\x, {1.6*ln(\x)});
+  \node[blue!55!black] at (7.3,3.62) {$y=\ln x$};
+
+  % точки касания: верхний левый угол прямоугольника лежит на графике
+  \foreach \x in {1,2,...,8} {
+    \fill[blue!55!black] (\x,{1.6*ln(\x)}) circle (0.05);
+  }
+
+\end{tikzpicture}
+\end{document}
