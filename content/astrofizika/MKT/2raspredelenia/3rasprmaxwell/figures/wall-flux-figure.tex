@@ -1,0 +1,55 @@
+% Иллюстрация к задаче о числе молекул, ударяющихся о стенку:
+% площадка dS, наклонный цилиндр длиной v dt под углом theta к нормали,
+% объём v cos(theta) dt dS; направление в телесном угле dOmega.
+% Компиляция: pdflatex wall-flux-figure.tex
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usetikzlibrary{arrows.meta,calc,patterns}
+
+\begin{document}
+\begin{tikzpicture}[
+    >={Stealth[length=2.4mm]},
+    helper/.style = {densely dashed, gray!70},
+    vel/.style    = {->, very thick, blue!55!black},
+    note/.style   = {gray!30!black},
+  ]
+
+  % ================= стенка (пол) =================
+  \fill[pattern=north east lines, pattern color=gray!70] (0.2,-0.3) rectangle (6.2,0);
+  \fill[gray!8] (0.2,0) -- (6.2,0) -- (7.7,0.96) -- (1.7,0.96) -- cycle;
+  \draw[thin] (0.2,0) -- (6.2,0) -- (7.7,0.96) -- (1.7,0.96) -- cycle;
+  \node[note] at (5.65,0.30) {стенка};
+
+  % ================= площадка dS =================
+  \draw[semithick, red!70!black, fill=red!18]
+        (2.82,0.24) -- (3.92,0.24) -- (4.58,0.66) -- (3.48,0.66) -- cycle;
+  \node[red!70!black] at (1.65,0.50) {$\mathrm{d}S$};
+  \draw[gray!70, thin] (1.98,0.45) -- (2.85,0.28);
+
+  % ================= наклонный цилиндр: сдвиг dS на v dt под углом theta =================
+  % ось цилиндра: направление (sin 38, cos 38), длина 2.9; сдвиг (1.786, 2.285)
+  \draw[thin] (2.82,0.24) -- (4.61,2.53);
+  \draw[thin] (3.92,0.24) -- (5.71,2.53);
+  \draw[thin] (4.58,0.66) -- (6.37,2.95);
+  % уровень высоты (до заливки верхней грани, чтобы она его перекрыла)
+  \draw[helper] (3.7,2.735) -- (5.49,2.735);
+  % верхняя грань
+  \fill[gray!10] (4.61,2.53) -- (5.71,2.53) -- (6.37,2.95) -- (5.27,2.95) -- cycle;
+  \draw[thin]    (4.61,2.53) -- (5.71,2.53) -- (6.37,2.95) -- (5.27,2.95) -- cycle;
+  \node[note] at (5.82,3.28) {$\mathrm{d}\Omega$};
+  \node[note] at (5.85,1.58) {$v\,\mathrm{d}t$};
+
+  % ================= нормаль, угол, высота =================
+  \draw[dashed, ->] (3.7,0.45) -- (3.7,3.1) node[above] {$\vec n$};
+  \draw[gray!30!black] (3.7,0.45) ++(90:0.85) arc[start angle=90, end angle=52, radius=0.85];
+  \node[gray!30!black] at (4.28,1.52) {$\theta$};
+  \node[note, anchor=east] at (3.55,1.60) {$v\cos\theta\,\mathrm{d}t$};
+
+  % ================= скорость молекул =================
+  \draw[vel] (3.35,2.72) -- (2.64,1.81);
+  \node[blue!55!black] at (2.62,2.32) {$\vec v$};
+
+\end{tikzpicture}
+\end{document}
