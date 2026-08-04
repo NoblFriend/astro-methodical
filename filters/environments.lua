@@ -170,7 +170,8 @@ function Pandoc(doc)
     local tag, rel = eq_target(v)
     if is_latex() then
       if rel then
-        return "\\href{" .. (siteurl or "") .. "/" .. rel .. "/index.html#eq-" .. tag .. "}{" .. text .. "}"
+        -- «\#» — сырой # ломает hyperref внутри сносок
+        return "\\href{" .. (siteurl or "") .. "/" .. rel .. "/index.html\\#eq-" .. tag .. "}{" .. text .. "}"
       end
       return "\\hyperlink{eq-" .. tag .. "}{" .. text .. "}"
     end
@@ -259,7 +260,7 @@ function Pandoc(doc)
           if is_latex() then
             if rel then
               return pandoc.RawInline("latex",
-                "\\href{" .. (siteurl or "") .. "/" .. rel .. "/index.html#eq-" .. tag .. "}{(" .. tag .. ")}")
+                "\\href{" .. (siteurl or "") .. "/" .. rel .. "/index.html\\#eq-" .. tag .. "}{(" .. tag .. ")}")
             end
             return pandoc.RawInline("latex", "\\hyperlink{eq-" .. tag .. "}{(" .. tag .. ")}")
           end
