@@ -77,7 +77,7 @@ $$
 Тогда среднее расстояние:
 
 $$
-\langle r \rangle = \lambda = \int_0^{+\infin} f(r) r dr = \int_0^{+\infin} k r \cdot e^{-k \cdot r} dr
+\langle r \rangle = \lambda = \int_0^{+\infty} f(r) r dr = \int_0^{+\infty} k r \cdot e^{-k \cdot r} dr
 $$
 
 Сделав замену и интегрируя по частям, получаем:
@@ -87,11 +87,11 @@ $$
 $$
 
 $$
-\lambda \cdot k = \int_0^{+\infin} \tau \cdot e^{- \tau} d \tau = \tau \cdot \int_0^{+\infin} e^{- \tau} d \tau - \int_0^{+\infin} \int_0^{+\infin} e^{- \tau} d \tau
+\lambda \cdot k = \int_0^{+\infty} \tau \cdot e^{- \tau} d \tau = \tau \cdot \int_0^{+\infty} e^{- \tau} d \tau - \int_0^{+\infty} \int_0^{+\infty} e^{- \tau} d \tau
 $$
 
 $$
-\lambda \cdot k = \left. - \tau e^{- \tau} d \tau - e^{- \tau}\right|_0^{+ \infin} = 1
+\lambda \cdot k = \left. - \tau e^{- \tau} d \tau - e^{- \tau}\right|_0^{+ \infty} = 1
 $$
 
 Откуда получаем итоговое выражение:
