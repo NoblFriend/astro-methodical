@@ -238,7 +238,7 @@ function Pandoc(doc)
         local path, frag = rest:match("^([^#]*)#?(.*)$")
         path = path:gsub("/$", "")
         path = path:gsub("[^/]+", function(seg)
-          local s = seg:gsub("^%d+[-_%.]?", "")
+          local s = seg:gsub("^%d+[-_%. ]?", "")
           return s ~= "" and s or seg
         end)
         local suffix = "/index.html" .. (frag ~= "" and ("#" .. frag) or "")
