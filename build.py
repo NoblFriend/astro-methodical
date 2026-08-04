@@ -784,7 +784,8 @@ def compile_pdf(tex_source, out_pdf):
                 ["xelatex", "-interaction=nonstopmode", "-halt-on-error", "main.tex"],
                 cwd=tmp, capture_output=True, text=True, env=env,
             )
-        if not (tmp / "main.pdf").exists():
+        # -halt-on-error оставляет обрезанный main.pdf — не выдавать его за готовый
+        if res.returncode != 0 or not (tmp / "main.pdf").exists():
             raise RuntimeError(f"PDF не собрался ({out_pdf.name}):\n{res.stdout[-3000:]}")
         shutil.copy(tmp / "main.pdf", out_pdf)
     log(f"pdf: {out_pdf.relative_to(SITE)}")
