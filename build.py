@@ -172,6 +172,11 @@ def load_article(art_dir):
             blocks.append((key, fname, btitle))
         else:
             warn(f"{art_dir}: нет блока {fname} — пропускаю")
+    known = {fname for _, fname, _ in BLOCK_DEFS}
+    for f in sorted(art_dir.glob("*.md")):
+        if f.name not in known:
+            warn(f"{art_dir}: файл {f.name} не совпадает ни с одним именем блока "
+                 f"({', '.join(sorted(known))}) — он не попадёт в сборку")
     return {"slug": art_dir.name, "dir": art_dir, "meta": meta, "blocks": blocks}
 
 
@@ -380,6 +385,14 @@ def validate_refs(article):
         for m in IMG_RE.finditer(text):
             src = m.group(1)
             if src.startswith(("http://", "https://")):
+                continue
+            if "\\" in src:
+                warn(f'{article["rel"]}/{fname}: картинка «{src}» — обратные слэши '
+                     f"(Windows-путь) не работают, замените на /")
+                continue
+            if not src.startswith("figures/"):
+                warn(f'{article["rel"]}/{fname}: картинка «{src}» лежит вне figures/ — '
+                     f"на сайт и в PDF попадают только файлы из папки figures/ статьи")
                 continue
             base = re.sub(r"\.tex$", "", src)
             if "." in Path(base).name:
