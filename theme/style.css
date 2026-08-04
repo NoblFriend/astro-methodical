@@ -417,6 +417,12 @@ a.footnote-back { text-decoration: none; margin-left: 0.25rem; }
   gap: 1rem;
 }
 
+.empty-group-note {
+  color: var(--ink-muted);
+  font-style: italic;
+  margin-top: 1.5rem;
+}
+
 .footer {
   margin-top: 4rem;
   padding-top: 1rem;

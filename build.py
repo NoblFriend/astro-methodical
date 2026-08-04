@@ -150,14 +150,25 @@ def parse_math_macros():
 
 # ---------------------------------------------------------------- дерево контента
 
+def find_meta_file(dirpath):
+    """meta.yml — единое имя для статей и групп; _meta.yml — старое имя групп."""
+    for name in ("meta.yml", "_meta.yml"):
+        if (dirpath / name).exists():
+            return dirpath / name
+    return None
+
+
 def load_node_meta(dirpath, fallback_title):
-    metafile = dirpath / "_meta.yml"
-    meta = read_yaml(metafile) if metafile.exists() else {}
+    metafile = find_meta_file(dirpath)
+    meta = read_yaml(metafile) if metafile else {}
+    if metafile is not None and metafile.name == "_meta.yml":
+        warn(f"{metafile}: переименуйте в meta.yml — теперь у статей и групп "
+             f"один файл метаданных (роль папки определяется наличием блоков)")
     meta.setdefault("title", fallback_title)
     if "order" in meta:
-        warn(f"{metafile}: поле order больше не используется — порядок задаётся "
+        warn(f"{dirpath}: поле order больше не используется — порядок задаётся "
              f"числовым префиксом имени папки («2raspredelenia»), уберите поле")
-    meta["order"] = default_order(metafile.parent.name)
+    meta["order"] = default_order(dirpath.name)
     meta.setdefault("description", "")
     return meta
 
@@ -204,6 +215,13 @@ def load_article(art_dir):
     return {"slug": art_dir.name, "dir": art_dir, "meta": meta, "blocks": blocks}
 
 
+def is_article_dir(dirpath):
+    """Статья — папка с meta.yml и хотя бы одним блоком (01-theory.md и т.п.);
+    папка с meta.yml без блоков — группа (глава), даже пустая."""
+    return (dirpath / "meta.yml").exists() and \
+        any((dirpath / fname).exists() for _, fname, _ in BLOCK_DEFS)
+
+
 def load_group(dirpath):
     """Папка-группа: подгруппы + статьи (рекурсивно, произвольная глубина)."""
     node = {
@@ -216,11 +234,13 @@ def load_group(dirpath):
     for child in sorted(dirpath.iterdir()):
         if not child.is_dir() or child.name.startswith(("_", ".")):
             continue
-        if (child / "meta.yml").exists():
+        if is_article_dir(child):
             node["articles"].append(load_article(child))
         else:
             sub = load_group(child)
-            if sub["groups"] or sub["articles"]:
+            # Пустая папка без метаданных (например figures/) — не группа;
+            # заготовка главы с meta.yml показывается и пустой
+            if sub["groups"] or sub["articles"] or find_meta_file(child):
                 node["groups"].append(sub)
     node["groups"].sort(key=lambda g: (g["meta"]["order"], g["meta"]["title"]))
     node["articles"].sort(key=lambda a: (a["meta"]["order"], a["meta"]["title"]))
@@ -655,11 +675,17 @@ def write_group_pages(writer, node, crumb_chain):
         al = authors_line(a["meta"].get("authors"))
         cards.append(card(f'{a["rel"]}/index.html', a["meta"]["title"],
                           a["meta"]["description"], f"Авторы: {al}" if al else ""))
+    if cards:
+        actions = (f'<div class="article-actions">'
+                   f'<a href="{{{{root}}}}/pdf/{node["rel"]}.pdf">⬇ PDF целиком</a></div>')
+        body = f'<ul class="card-list">{"".join(cards)}</ul>'
+    else:
+        actions = ""
+        body = '<p class="empty-group-note">Статей пока нет — глава в разработке.</p>'
     content = (
         f'<h1>{esc(node["meta"]["title"])}</h1>'
         f'<p class="article-description">{esc(node["meta"].get("description", ""))}</p>'
-        f'<div class="article-actions"><a href="{{{{root}}}}/pdf/{node["rel"]}.pdf">⬇ PDF целиком</a></div>'
-        f'<ul class="card-list">{"".join(cards)}</ul>'
+        f"{actions}{body}"
     )
     writer.write_page(f'{node["rel"]}/index.html', node["meta"]["title"], content,
                       writer.crumbs(crumbs_here))
@@ -811,6 +837,8 @@ def build_pdfs(tree, config):
     site_title = config["title"]
 
     def walk(node, parent_titles):
+        if not article_count(node):
+            return  # пустая глава-заготовка — PDF не из чего собирать
         # PDF самой группы
         subtitle = " · ".join(parent_titles) if parent_titles else site_title
         compile_pdf(
