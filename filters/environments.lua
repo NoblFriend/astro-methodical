@@ -3,9 +3,13 @@
 --
 -- Окружения:
 --   ::: {.definition title="..."}   — определение
+--   ::: {.theorem title="..."}      — теорема
+--   ::: {.law title="..."}          — закон (например, первое начало ТД)
 --   ::: {.formula-box caption="..."} — формула в рамке с подписью
 --   ::: note                         — заметка (левая черта, мелкий шрифт)
---   ::: problem                      — задача (автонумерация)
+--   ::: problem                      — задача (автонумерация);
+--       атрибуты: title="..." — название, comment="..." — подпись у названия
+--       (например, какие навыки развивает); comment можно писать и как skills=
 --   ::: solution                     — решение (на сайте сворачивается)
 --
 -- Картинки: `![подпись](figures/имя)` без расширения — это TikZ-исходник
@@ -33,25 +37,40 @@ local function latex_env(el, env, opt)
   return blocks
 end
 
+-- Окружения-«коробки» с бейджем и необязательным названием:
+-- класс → (LaTeX-окружение, текст бейджа)
+local BADGE_ENVS = {
+  definition = {latex = "defbox", badge = "Определение"},
+  theorem    = {latex = "thmbox", badge = "Теорема"},
+  law        = {latex = "lawbox", badge = "Закон"},
+}
+
+local function badge_env(el, spec)
+  local title = el.attributes["title"]
+  if is_latex() then
+    return latex_env(el, spec.latex, title)
+  elseif is_html() then
+    local label = pandoc.Inlines{pandoc.Span(pandoc.Str(spec.badge), {class = "env-badge"})}
+    if title then
+      label:insert(pandoc.Space())
+      label:insert(pandoc.Span(parse_inlines(title), {class = "env-name"}))
+    end
+    local blocks = pandoc.List{pandoc.Plain(label)}
+    blocks:extend(el.content)
+    return pandoc.Div(blocks, el.attr)
+  end
+end
+
 function Div(el)
   local c = el.classes
 
-  if c:includes("definition") then
-    local title = el.attributes["title"]
-    if is_latex() then
-      return latex_env(el, "defbox", title)
-    elseif is_html() then
-      local label = pandoc.Inlines{pandoc.Span(pandoc.Str("Определение"), {class = "env-badge"})}
-      if title then
-        label:insert(pandoc.Space())
-        label:insert(pandoc.Span(parse_inlines(title), {class = "env-name"}))
-      end
-      local blocks = pandoc.List{pandoc.Plain(label)}
-      blocks:extend(el.content)
-      return pandoc.Div(blocks, el.attr)
+  for cls, spec in pairs(BADGE_ENVS) do
+    if c:includes(cls) then
+      return badge_env(el, spec)
     end
+  end
 
-  elseif c:includes("formula-box") then
+  if c:includes("formula-box") then
     local caption = el.attributes["caption"]
     if is_latex() then
       local blocks = pandoc.List{pandoc.RawBlock("latex", "\\begin{formulabox}")}
@@ -77,10 +96,32 @@ function Div(el)
     -- HTML: остаётся <div class="note">, стилизуется CSS
 
   elseif c:includes("problem") then
+    local title = el.attributes["title"]
+    local comment = el.attributes["comment"] or el.attributes["skills"]
     if is_latex() then
-      return latex_env(el, "problembox")
+      local opt
+      if title or comment then
+        opt = title or ""
+        if comment then
+          opt = opt .. "\\hfill{\\normalfont\\small\\itshape " .. comment .. "}"
+        end
+      end
+      return latex_env(el, "problembox", opt)
+    elseif is_html() then
+      -- Шапка задачи: номер (CSS-счётчик) + название + комментарий
+      local head = pandoc.Inlines{pandoc.Span(pandoc.Inlines{}, {class = "problem-num"})}
+      if title then
+        head:insert(pandoc.Space())
+        head:insert(pandoc.Span(parse_inlines(title), {class = "problem-title"}))
+      end
+      if comment then
+        head:insert(pandoc.Space())
+        head:insert(pandoc.Span(parse_inlines(comment), {class = "problem-comment"}))
+      end
+      local blocks = pandoc.List{pandoc.Div({pandoc.Plain(head)}, {class = "problem-head"})}
+      blocks:extend(el.content)
+      return pandoc.Div(blocks, el.attr)
     end
-    -- HTML: <div class="problem">, номер вешает CSS-счётчик
 
   elseif c:includes("solution") then
     if is_latex() then
@@ -116,25 +157,46 @@ function Pandoc(doc)
     if k then labels[k] = v end
   end
 
-  -- Ссылка на формулу — кликабельная: ведёт на якорь формулы.
-  local function eq_link(tag, text)
+  -- Значение метки: «номер» (своя статья) или «номер@путь» (чужая статья).
+  local function eq_target(v)
+    local tag, rel = v:match("^(.-)@(.+)$")
+    if tag then return tag, rel end
+    return v, nil
+  end
+
+  -- Ссылка на формулу — кликабельная: ведёт на якорь формулы
+  -- (в своей статье — просто #, в чужой — на её страницу).
+  local function eq_link(v, text)
+    local tag, rel = eq_target(v)
     if is_latex() then
+      if rel then
+        return "\\href{" .. (siteurl or "") .. "/" .. rel .. "/index.html#eq-" .. tag .. "}{" .. text .. "}"
+      end
       return "\\hyperlink{eq-" .. tag .. "}{" .. text .. "}"
+    end
+    if rel then
+      return "\\href{{{root}}/" .. rel .. "/index.html#eq-" .. tag .. "}{" .. text .. "}"
     end
     return "\\href{#eq-" .. tag .. "}{" .. text .. "}"
   end
 
   local function subst_refs(tex)
     tex = tex:gsub("\\eqref%{([^}]*)%}", function(l)
-      local t = labels[l]
-      if not t then return "(\\text{??})" end
-      return eq_link(t, "(\\text{" .. t .. "})")
+      local v = labels[l]
+      if not v then return "(\\text{??})" end
+      return eq_link(v, "(\\text{" .. eq_target(v) .. "})")
     end)
     tex = tex:gsub("\\ref%{([^}]*)%}", function(l)
-      local t = labels[l]
-      if not t then return "\\text{??}" end
-      return eq_link(t, "\\text{" .. t .. "}")
+      local v = labels[l]
+      if not v then return "\\text{??}" end
+      return eq_link(v, "\\text{" .. eq_target(v) .. "}")
     end)
+    if not is_latex() then
+      -- Расширение physics в MathJax не понимает \dd^3 (в LaTeX это работает);
+      -- переписываем в эквивалентное \dd[3]
+      tex = tex:gsub("\\dd%s*%^%s*{([^}]*)}", "\\dd[%1]")
+      tex = tex:gsub("\\dd%s*%^%s*([^%s{])", "\\dd[%1]")
+    end
     return tex
   end
 
@@ -187,11 +249,16 @@ function Pandoc(doc)
       if r.format == "tex" or r.format == "latex" then
         local l = r.text:match("^\\eqref%{([^}]*)%}$")
         if l and labels[l] then
-          local t = labels[l]
+          local tag, rel = eq_target(labels[l])
           if is_latex() then
-            return pandoc.RawInline("latex", "\\hyperlink{eq-" .. t .. "}{(" .. t .. ")}")
+            if rel then
+              return pandoc.RawInline("latex",
+                "\\href{" .. (siteurl or "") .. "/" .. rel .. "/index.html#eq-" .. tag .. "}{(" .. tag .. ")}")
+            end
+            return pandoc.RawInline("latex", "\\hyperlink{eq-" .. tag .. "}{(" .. tag .. ")}")
           end
-          return pandoc.Link("(" .. t .. ")", "#eq-" .. t)
+          local href = rel and ("{{root}}/" .. rel .. "/index.html#eq-" .. tag) or ("#eq-" .. tag)
+          return pandoc.Link("(" .. tag .. ")", href)
         end
       end
     end,

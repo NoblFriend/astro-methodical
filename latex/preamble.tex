@@ -34,6 +34,10 @@
 \definecolor{envframe}{HTML}{3D5A99}
 \definecolor{envback}{HTML}{F2F5FB}
 \definecolor{inkmuted}{HTML}{555B66}
+\definecolor{thmframe}{HTML}{2E7D5B}
+\definecolor{thmback}{HTML}{E9F5EF}
+\definecolor{lawframe}{HTML}{A3562A}
+\definecolor{lawback}{HTML}{F9EFE7}
 
 % --- Определение ---
 \newtcolorbox{defbox}[1][]{%
@@ -42,6 +46,22 @@
   left=8pt, right=8pt, top=6pt, bottom=6pt,
   coltitle=white, colbacktitle=envframe, fonttitle=\bfseries\small,
   title={Определение\ifstrempty{#1}{}{ · #1}}}
+
+% --- Теорема ---
+\newtcolorbox{thmbox}[1][]{%
+  enhanced, breakable,
+  colback=thmback, colframe=thmframe, boxrule=0.6pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  coltitle=white, colbacktitle=thmframe, fonttitle=\bfseries\small,
+  title={Теорема\ifstrempty{#1}{}{ · #1}}}
+
+% --- Закон ---
+\newtcolorbox{lawbox}[1][]{%
+  enhanced, breakable,
+  colback=lawback, colframe=lawframe, boxrule=0.6pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  coltitle=white, colbacktitle=lawframe, fonttitle=\bfseries\small,
+  title={Закон\ifstrempty{#1}{}{ · #1}}}
 
 % --- Формула в рамке с подписью ---
 \newtcolorbox{formulabox}{%
@@ -59,13 +79,15 @@
   fontupper=\small\color{inkmuted}}
 
 % --- Задача (автонумерация) и решение ---
-\newtcolorbox[auto counter]{problembox}{%
+% Необязательный аргумент — название задачи и/или комментарий к ней
+% (фильтр передаёт «Название\hfill{\small\itshape комментарий}»)
+\newtcolorbox[auto counter]{problembox}[1][]{%
   enhanced, breakable,
   colback=black!3, colframe=black!35, boxrule=0.5pt, arc=2pt,
   left=8pt, right=8pt, top=6pt, bottom=6pt,
   fonttitle=\bfseries, coltitle=black,
   attach title to upper={\par\smallskip},
-  title={Задача~\thetcbcounter.}}
+  title={Задача~\thetcbcounter.\ifstrempty{#1}{}{ #1}}}
 
 \newenvironment{solutionenv}
   {\par\medskip\noindent{\itshape Решение.}\par\nobreak\smallskip}

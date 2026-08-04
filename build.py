@@ -46,7 +46,7 @@ SITE_URL = ""  # заполняется из config.yml в main()
 
 # Канонический состав статьи: (ключ, имя файла, заголовок блока)
 BLOCK_DEFS = [
-    ("theory", "01-theory.md", "Обсуждение формул"),
+    ("theory", "01-theory.md", "Обсуждение и формулы"),
     ("derivations", "02-derivations.md", "Выводы формул"),
     ("methods", "03-methods.md", "Методы решения задач"),
 ]
@@ -278,6 +278,29 @@ def analyze_equations(article):
     article["eqlabels"] = labels
 
 
+def link_foreign_labels(articles):
+    """Метки формул из чужих статей: \\eqref{x} работает и между статьями.
+
+    В eqlabels статьи добавляются чужие метки со значением «номер@путь-статьи»;
+    Lua-фильтр по «@» понимает, что ссылка ведёт на другую страницу.
+    Своя метка всегда в приоритете; неоднозначные (в двух статьях) не линкуются.
+    """
+    owners = {}
+    for a in articles:
+        for lbl, tag in a["eqlabels"].items():
+            owners.setdefault(lbl, []).append((a["rel"], tag))
+    for lbl, variants in owners.items():
+        if len(variants) > 1:
+            warn(f"метка формулы «{lbl}» определена сразу в статьях "
+                 f'{", ".join(rel for rel, _ in variants)} — межстатейные ссылки '
+                 f"на неё не работают, переименуйте метки")
+    for a in articles:
+        for lbl, variants in owners.items():
+            if lbl not in a["eqlabels"] and len(variants) == 1:
+                rel, tag = variants[0]
+                a["eqlabels"][lbl] = f"{tag}@{rel}"
+
+
 def eq_args(article, block_key):
     enc = "|".join(f"{k}={v}" for k, v in article["eqlabels"].items())
     return [
@@ -404,9 +427,14 @@ def validate_refs(article):
                      f"ожидаю файл {expected}")
         for m in XLINK_RE.finditer(text):
             path = m.group(1).rstrip("/")
-            if not (CONTENT / path / "meta.yml").exists():
+            if not (CONTENT / path / "meta.yml").exists() \
+                    and not (CONTENT / path / "_meta.yml").exists():
                 warn(f'{article["rel"]}/{fname}: ссылка @/{path} никуда не ведёт — '
-                     f"нет статьи content/{path}/")
+                     f"нет статьи или группы content/{path}/")
+        for m in re.finditer(r"\\eqref\{([^}]*)\}", text):
+            if m.group(1) not in article["eqlabels"]:
+                warn(f'{article["rel"]}/{fname}: \\eqref{{{m.group(1)}}} — метка '
+                     f"не найдена ни в одной статье, ссылка отобразится как (??)")
 
 
 # ---------------------------------------------------------------- HTML-страницы
@@ -587,8 +615,11 @@ def build_site(tree, config, writer):
     for f in THEME.iterdir():
         shutil.copy(f, SITE / "assets" / f.name)
 
-    for art in [a for sec in tree for a in iter_articles(sec)]:
+    all_articles = [a for sec in tree for a in iter_articles(sec)]
+    for art in all_articles:
         analyze_equations(art)
+    link_foreign_labels(all_articles)
+    for art in all_articles:
         validate_refs(art)
 
     cards = []

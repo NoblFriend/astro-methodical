@@ -29,7 +29,13 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Без этого мобильные браузеры «раздувают» обычный текст, но не формулы
+     MathJax — и размеры текста и формул перестают совпадать */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
   margin: 0;
@@ -45,6 +51,8 @@ body {
 
 /* ============ Сайдбар ============ */
 .sidebar {
+  grid-column: 1;
+  grid-row: 1;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   padding: 1.4rem 1.1rem 2rem;
@@ -106,10 +114,24 @@ body {
 
 /* ============ Основная колонка ============ */
 .main {
+  grid-column: 2;
+  grid-row: 1;
   padding: 1.6rem 2.5rem 4rem;
   max-width: 54rem;
   width: 100%;
   margin: 0 auto;
+  min-width: 0;
+}
+
+/* Широкие выключные формулы скроллятся по горизонтали, а не распирают страницу.
+   !important нужен: для формул с номером (\tag) MathJax вешает инлайновый
+   min-width, который иначе перебивает max-width и растягивает страницу */
+mjx-container { max-width: 100%; }
+mjx-container[display="true"] {
+  min-width: 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
 }
 
 .breadcrumbs {
@@ -272,6 +294,19 @@ th { font-family: var(--sans); background: var(--accent-soft); }
 }
 .env-name { font-family: var(--sans); font-weight: 700; font-size: 0.95rem; }
 
+.theorem { --env-color: #2e7d5b; --env-soft: #e9f5ef; }
+.law     { --env-color: #a3562a; --env-soft: #f9efe7; }
+[data-theme="dark"] .theorem { --env-color: #7cc7a4; --env-soft: #1d2e26; }
+[data-theme="dark"] .law     { --env-color: #d99a6c; --env-soft: #33241a; }
+.theorem, .law {
+  background: var(--env-soft);
+  border: 1px solid var(--env-color);
+  border-radius: 8px;
+  padding: 0.8rem 1.1rem;
+  margin: 1.3rem 0;
+}
+.theorem .env-badge, .law .env-badge { color: var(--env-color); }
+
 .formula-box {
   border: 1.5px solid var(--ink);
   border-radius: 4px;
@@ -297,6 +332,12 @@ th { font-family: var(--sans); background: var(--accent-soft); }
   font-size: 0.88rem;
   color: var(--ink-muted);
 }
+/* Иллюстрации в заметках — отдельной строкой по центру, даже если
+   в исходнике картинка стоит внутри абзаца */
+.note img {
+  display: block;
+  margin: 0.6rem auto;
+}
 
 .article-blocks { counter-reset: problem; }
 .problem {
@@ -307,13 +348,21 @@ th { font-family: var(--sans); background: var(--accent-soft); }
   margin: 1.4rem 0;
   box-shadow: var(--shadow);
 }
-.problem::before {
+.problem-head {
+  font-family: var(--sans);
+  margin-bottom: 0.3rem;
+}
+.problem-num::before {
   counter-increment: problem;
   content: "Задача " counter(problem) ".";
-  display: block;
-  font-family: var(--sans);
   font-weight: 700;
-  margin-bottom: 0.3rem;
+}
+.problem-title { font-weight: 700; }
+.problem-comment {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--ink-muted);
+  margin-left: 0.35rem;
 }
 
 details.solution { margin: 0.7rem 0 0.3rem; }
@@ -380,10 +429,12 @@ a.footnote-back { text-decoration: none; margin-left: 0.25rem; }
 /* ============ Мобильная вёрстка ============ */
 @media (max-width: 900px) {
   body { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
-  .main { padding: 1.2rem 1.2rem 3rem; }
+  .sidebar { grid-column: 1; grid-row: 1; position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .main { grid-column: 1; grid-row: 2; padding: 1.2rem 1.2rem 3rem; }
   .block-head { flex-wrap: wrap; }
   .block-authors { margin-left: 0; }
+  /* Широкие таблицы тоже не должны распирать страницу */
+  table { display: block; overflow-x: auto; }
 }
 
 /* ============ Печать / «PDF из браузера» ============ */
@@ -393,7 +444,7 @@ a.footnote-back { text-decoration: none; margin-left: 0.25rem; }
   .main { max-width: none; padding: 0; }
   .block.hidden { display: none !important; }
   .block { break-inside: auto; }
-  .problem, .definition, .formula-box { break-inside: avoid; }
+  .problem, .definition, .theorem, .law, .formula-box { break-inside: avoid; }
   details.solution summary { list-style: none; }
   details.solution summary::marker { content: ""; }
   a { color: #000; text-decoration: none; }
