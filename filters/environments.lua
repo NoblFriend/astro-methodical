@@ -230,11 +230,17 @@ function Pandoc(doc)
       return m
     end,
     Link = function(a)
-      -- Межстатейные ссылки: [текст](@/путь/к/статье) или (@/путь#якорь)
+      -- Межстатейные ссылки: [текст](@/путь/к/статье) или (@/путь#якорь).
+      -- Путь пишется по папкам content/; числовые префиксы-порядки в URL
+      -- не попадают (то же правило, что url_slug в build.py).
       local rest = a.target:match("^@/(.*)$")
       if rest then
         local path, frag = rest:match("^([^#]*)#?(.*)$")
         path = path:gsub("/$", "")
+        path = path:gsub("[^/]+", function(seg)
+          local s = seg:gsub("^%d+[-_%.]?", "")
+          return s ~= "" and s or seg
+        end)
         local suffix = "/index.html" .. (frag ~= "" and ("#" .. frag) or "")
         if is_latex() then
           a.target = (siteurl or "") .. "/" .. path .. suffix

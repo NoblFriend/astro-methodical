@@ -154,7 +154,10 @@ def load_node_meta(dirpath, fallback_title):
     metafile = dirpath / "_meta.yml"
     meta = read_yaml(metafile) if metafile.exists() else {}
     meta.setdefault("title", fallback_title)
-    meta.setdefault("order", default_order(metafile.parent.name))
+    if "order" in meta:
+        warn(f"{metafile}: поле order больше не используется — порядок задаётся "
+             f"числовым префиксом имени папки («2raspredelenia»), уберите поле")
+    meta["order"] = default_order(metafile.parent.name)
     meta.setdefault("description", "")
     return meta
 
@@ -168,13 +171,25 @@ def default_order(dirname):
     return int(m.group(1)) if m else 999
 
 
+def url_slug(dirname):
+    """Имя папки → сегмент URL: числовой префикс-порядок (и разделитель за ним)
+    отбрасывается — «1Id_gas» → «Id_gas». Локально папки сортируются как надо,
+    а в адресах сайта цифры не светятся. То же правило продублировано в
+    filters/environments.lua для @/-ссылок."""
+    stripped = re.sub(r"^\d+[-_.]?", "", dirname)
+    return stripped or dirname
+
+
 def load_article(art_dir):
     meta = read_yaml(art_dir / "meta.yml")
     for field in ("title", "description"):
         if field not in meta:
             warn(f"{art_dir}: в meta.yml нет поля «{field}»")
             meta.setdefault(field, art_dir.name)
-    meta.setdefault("order", default_order(art_dir.name))
+    if "order" in meta:
+        warn(f"{art_dir}: поле order больше не используется — порядок задаётся "
+             f"числовым префиксом имени папки («2raspredelenia»), уберите поле")
+    meta["order"] = default_order(art_dir.name)
     blocks = []
     for key, fname, btitle in BLOCK_DEFS:
         if (art_dir / fname).exists():
@@ -209,35 +224,48 @@ def load_group(dirpath):
                 node["groups"].append(sub)
     node["groups"].sort(key=lambda g: (g["meta"]["order"], g["meta"]["title"]))
     node["articles"].sort(key=lambda a: (a["meta"]["order"], a["meta"]["title"]))
-    # Одинаковый order у соседей — порядок фактически алфавитный, а нумерация
+    # Одинаковый порядок у соседей — фактически алфавитный, а нумерация
     # формул может «поплыть» при переименовании; лучше задать явно.
     for kind in ("groups", "articles"):
+        if len(node[kind]) < 2:
+            continue
         prev = None
         for child in node[kind]:
             o = child["meta"]["order"]
             if prev is not None and o == prev["meta"]["order"]:
                 warn(f'{dirpath.relative_to(CONTENT) if dirpath != CONTENT else "content"}: '
-                     f'у «{prev["meta"]["title"]}» и «{child["meta"]["title"]}» '
-                     f"одинаковый order={o} — порядок между ними алфавитный, "
-                     f"задайте разные order в meta")
+                     f'у папок «{prev["slug"]}» и «{child["slug"]}» одинаковый '
+                     f"порядок — порядок между ними алфавитный, добавьте папкам "
+                     f"числовые префиксы («1foo», «2bar»)")
             prev = child
     return node
 
 
 def assign_codes(sections):
-    """Коды нумерации: раздел — буква, глубже — позиционные индексы."""
+    """Коды нумерации: раздел — буква, глубже — позиционные индексы.
+    rel — путь страницы на сайте: имена папок без числовых префиксов."""
+    def check_slugs(node):
+        seen = {}
+        for child in node["groups"] + node["articles"]:
+            s = url_slug(child["slug"])
+            if s in seen:
+                warn(f'{node["dir"]}: папки «{seen[s]}» и «{child["slug"]}» дают '
+                     f"одинаковый URL «{s}» — переименуйте одну из них")
+            seen[s] = child["slug"]
+
     def walk(node, codes, rel):
         node["codes"] = codes
-        node["rel"] = rel  # путь относительно content/, POSIX-строка
+        node["rel"] = rel
+        check_slugs(node)
         for i, g in enumerate(node["groups"], 1):
-            walk(g, codes + [str(i)], f'{rel}/{g["slug"]}')
+            walk(g, codes + [str(i)], f'{rel}/{url_slug(g["slug"])}')
         for i, a in enumerate(node["articles"], 1):
             a["codes"] = codes + [str(i)]
-            a["rel"] = f'{rel}/{a["slug"]}'
+            a["rel"] = f'{rel}/{url_slug(a["slug"])}'
 
     for sec in sections:
         code = str(sec["meta"].get("code") or sec["meta"]["title"][0]).upper()
-        walk(sec, [code], sec["slug"])
+        walk(sec, [code], url_slug(sec["slug"]))
 
 
 def load_tree():
@@ -422,7 +450,29 @@ IMG_RE = re.compile(r"!\[[^\]]*\]\(\s*([^)\s]+)")
 XLINK_RE = re.compile(r"\]\(\s*@/([^)#\s]+)")
 
 
-def validate_refs(article):
+def collect_rels(tree):
+    """Все валидные URL-пути (rel) групп и статей."""
+    rels = set()
+
+    def walk(node):
+        rels.add(node["rel"])
+        for a in node["articles"]:
+            rels.add(a["rel"])
+        for g in node["groups"]:
+            walk(g)
+
+    for sec in tree:
+        walk(sec)
+    return rels
+
+
+def normalize_xlink(path):
+    """Путь из @/-ссылки → URL-путь: с каждого сегмента срезается
+    числовой префикс-порядок (можно писать и по папкам, и по URL)."""
+    return "/".join(url_slug(seg) for seg in path.split("/") if seg)
+
+
+def validate_refs(article, valid_rels):
     """Понятные предупреждения про несуществующие картинки и межстатейные ссылки."""
     for _, fname, _ in article["blocks"]:
         text = (article["dir"] / fname).read_text(encoding="utf-8")
@@ -448,10 +498,13 @@ def validate_refs(article):
                      f"ожидаю файл {expected}")
         for m in XLINK_RE.finditer(text):
             path = m.group(1).rstrip("/")
-            if not (CONTENT / path / "meta.yml").exists() \
-                    and not (CONTENT / path / "_meta.yml").exists():
+            norm = normalize_xlink(path)
+            if norm not in valid_rels:
                 warn(f'{article["rel"]}/{fname}: ссылка @/{path} никуда не ведёт — '
-                     f"нет статьи или группы content/{path}/")
+                     f"нет такой статьи или группы")
+            elif norm != path:
+                warn(f'{article["rel"]}/{fname}: в ссылке @/{path} числовые '
+                     f"префиксы папок — в @/-ссылках пишется адрес сайта: @/{norm}")
         for m in re.finditer(r"\\eqref\{([^}]*)\}", text):
             if m.group(1) not in article["eqlabels"]:
                 warn(f'{article["rel"]}/{fname}: \\eqref{{{m.group(1)}}} — метка '
@@ -640,8 +693,9 @@ def build_site(tree, config, writer):
     for art in all_articles:
         analyze_equations(art)
     link_foreign_labels(all_articles)
+    valid_rels = collect_rels(tree)
     for art in all_articles:
-        validate_refs(art)
+        validate_refs(art, valid_rels)
 
     cards = []
     for sec in tree:
