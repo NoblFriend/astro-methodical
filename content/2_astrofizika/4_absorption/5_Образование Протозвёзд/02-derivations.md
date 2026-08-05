@@ -13,10 +13,10 @@ $$
 Теперь время распространения звуковой волны:
 
 $$
-a_s = \sqrt{\frac{\gamma \mathrm{R} T}{\mu}}
+a_s = \sqrt{\frac{n \mathrm{R} T}{\mu}}
 $$
 
-Тогда от края облака волна возмущения дойдёт  за время $T_S$:
+Здесь $n$ это опять же показатель политропы ($P \cdot V^n =$ const). Тогда от края облака волна возмущения дойдёт  за время $T_S$:
 
 $$
 T_S = \frac{R}{a_s}
@@ -31,13 +31,13 @@ $$
 Выражая радиус облака, получаем:
 
 $$
-R > \sqrt{\frac{\gamma \mathrm{R} T}{\mu}} \cdot \sqrt{\frac{3 \pi}{32 G \rho}}
+R > \sqrt{\frac{n \mathrm{R} T}{\mu}} \cdot \sqrt{\frac{3 \pi}{32 G \rho}}
 $$
 
 Итого, критический размер облака (или же длина Джинса):
 
 $$
 \boxed{
-D_J = 2 R = \sqrt{\frac{\gamma \mathrm{R} T}{\mu}} \cdot \sqrt{\frac{3 \pi}{8 G \rho}}
+D_J = 2 R = \sqrt{\frac{n \mathrm{R} T}{\mu}} \cdot \sqrt{\frac{3 \pi}{8 G \rho}}
 }
 $$
