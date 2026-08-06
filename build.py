@@ -544,22 +544,48 @@ def esc(s):
 
 
 def sidebar_html(tree, current):
-    """current — путь страницы относительно site/ (например 'a/b/c/index.html')."""
-    def link(href, text, cls=""):
+    """current — путь страницы относительно site/ (например 'a/b/c/index.html').
+
+    Дерево сворачиваемое: раскрыты верхний уровень и цепочка до текущей
+    страницы (это решается здесь, при сборке — без мигания на клиенте);
+    остальным управляет пользователь, app.js запоминает его выбор."""
+    def link(href, text):
         cur = ' class="current"' if href == current else ""
         return f'<a href="{{{{root}}}}/{href}"{cur}>{esc(text)}</a>'
 
+    def contains_current(node):
+        if f'{node["rel"]}/index.html' == current:
+            return True
+        return any(contains_current(g) for g in node["groups"]) or \
+            any(f'{a["rel"]}/index.html' == current for a in node["articles"])
+
     def group_items(node, top=False):
-        cls = "nav-section" if top else "nav-subtopic"
-        out = [f'<li class="{cls}">', link(f'{node["rel"]}/index.html', node["meta"]["title"]), "<ul>"]
+        classes = "nav-group" + (" nav-top" if top else "")
+        if top or contains_current(node):
+            classes += " open"
+        title_link = link(f'{node["rel"]}/index.html', node["meta"]["title"])
+        if not node["groups"] and not node["articles"]:
+            # Пустая глава-заготовка: раскрывать нечего — точка вместо шеврона
+            return [f'<li class="{classes}">',
+                    f'<div class="nav-row"><span class="nav-dot"></span>{title_link}</div>',
+                    "</li>"]
+        out = [
+            f'<li class="{classes}" data-nav="{esc(node["rel"])}">',
+            '<div class="nav-row">'
+            '<button class="nav-toggle" type="button" aria-label="Свернуть или развернуть"></button>'
+            + title_link
+            + "</div>",
+            '<ul class="nav-children">',
+        ]
         for g in node["groups"]:
             out.extend(group_items(g))
         for a in node["articles"]:
-            out.append("<li>" + link(f'{a["rel"]}/index.html', a["meta"]["title"]) + "</li>")
+            out.append('<li class="nav-leaf">'
+                       + link(f'{a["rel"]}/index.html', a["meta"]["title"]) + "</li>")
         out.append("</ul></li>")
         return out
 
-    out = ["<ul>"]
+    out = ['<ul class="nav-tree">']
     for sec in tree:
         out.extend(group_items(sec, top=True))
     out.append("</ul>")

@@ -25,7 +25,44 @@
     }
     initBlockPanel();
     initSearch();
+    initNav();
   });
+
+  /* ---------- Сворачиваемое меню ---------- */
+  var NAV_KEY = "metod-nav-v1";
+
+  function initNav() {
+    var tree = document.querySelector(".nav-tree");
+    if (!tree) return;
+
+    var prefs;
+    try { prefs = JSON.parse(localStorage.getItem(NAV_KEY)) || {}; }
+    catch (e) { prefs = {}; }
+
+    var groups = tree.querySelectorAll(".nav-group");
+    groups.forEach(function (li) {
+      var key = li.dataset.nav;
+
+      // Применяем запомненный выбор пользователя поверх серверных умолчаний,
+      // но цепочку до текущей страницы не даём захлопнуть
+      if (key in prefs && !li.querySelector("a.current")) {
+        li.classList.toggle("open", !!prefs[key]);
+      }
+
+      var btn = li.querySelector(":scope > .nav-row .nav-toggle");
+      if (!btn) return;
+      btn.setAttribute("aria-expanded", li.classList.contains("open"));
+      btn.addEventListener("click", function () {
+        var open = li.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open);
+        prefs[key] = open ? 1 : 0;
+        localStorage.setItem(NAV_KEY, JSON.stringify(prefs));
+      });
+    });
+
+    var cur = tree.querySelector("a.current");
+    if (cur) cur.scrollIntoView({ block: "nearest" });
+  }
 
   /* ---------- Панель блоков ---------- */
   var PREFS_KEY = "metod-blocks-v1";
