@@ -157,8 +157,19 @@ sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-recommended \
   dvisvgm ghostscript poppler-utils
 
 # macOS:
-brew install pandoc          # + MacTeX для картинок и PDF
+brew install pandoc
+# LaTeX, вариант 1 — полный MacTeX (~6 ГБ, всё работает из коробки):
+brew install --cask mactex-no-gui
+# LaTeX, вариант 2 — компактный BasicTeX + пакеты, которые нужны учебнику:
+brew install --cask basictex
+sudo tlmgr update --self
+sudo tlmgr install standalone preview pgf collection-langcyrillic cm-super \
+  dvisvgm polyglossia physics tcolorbox environ trimspaces
 ```
+
+Если сборка картинки падает с «File \`что-то.cls/.sty' not found» — это
+неполный дистрибутив TeX: доустановите пакеты командой `tlmgr` выше.
+Сборка сайта при этом не падает — картинка пропускается с предупреждением.
 
 ```bash
 make site     # сайт → site/

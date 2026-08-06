@@ -414,6 +414,15 @@ def compile_figure(tex_path):
         )
         built = tmp / (tex_path.stem + ".pdf")
         if res.returncode != 0 or not built.exists():
+            # Неполный дистрибутив TeX (например BasicTeX) — не смерть сборки:
+            # картинка пропускается с подсказкой, что доустановить
+            m = re.search(r"File `([^']+)' not found", res.stdout)
+            if m:
+                raise ToolMissing(
+                    f"LaTeX-пакет с файлом «{m.group(1)}» — доустановите TeX: "
+                    f"см. раздел «Локальная сборка» в README "
+                    f"(для BasicTeX: sudo tlmgr install standalone preview pgf "
+                    f"collection-langcyrillic cm-super dvisvgm)")
             raise RuntimeError(f"Не собралась картинка {tex_path}:\n{res.stdout[-2000:]}")
         shutil.copy(built, pdf)
     convert_pdf_to_svg(pdf, svg)
