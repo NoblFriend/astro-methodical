@@ -26,6 +26,15 @@
     initBlockPanel();
     initSearch();
     initNav();
+
+    // Кнопка «Оглавление» на телефоне
+    var menuBtn = document.getElementById("menu-toggle");
+    if (menuBtn) {
+      menuBtn.addEventListener("click", function () {
+        var open = document.querySelector(".sidebar").classList.toggle("nav-open");
+        menuBtn.setAttribute("aria-expanded", open);
+      });
+    }
   });
 
   /* ---------- Сворачиваемое меню ---------- */
