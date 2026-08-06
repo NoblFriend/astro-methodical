@@ -175,6 +175,8 @@ sudo tlmgr install standalone preview pgf collection-langcyrillic cm-super \
 make site     # сайт → site/
 make pdf      # сайт + все PDF (статьи, все уровни групп, весь учебник)
 make watch    # живой предпросмотр: правишь файл — страница сама обновляется
+              # (правка внутри одной статьи пересобирает только её — доли секунды;
+              #  правка темы/шаблонов/meta.yml — полную сборку)
 make serve    # просто раздать собранный site/
 make search   # опционально: поисковый индекс (нужен node/npx)
 ```

@@ -39,16 +39,48 @@ def snapshot():
     return state
 
 
-def rebuild():
+BLOCK_FILES = ("01-theory.md", "02-derivations.md", "03-methods.md")
+
+
+def article_dir_of(path):
+    """Папка статьи, которой принадлежит файл (или None)."""
+    p = Path(path).resolve()
+    content = (ROOT / "content").resolve()
+    if content not in p.parents:
+        return None
+    for d in p.parents:
+        if d == content:
+            break
+        if (d / "meta.yml").exists() and any((d / b).exists() for b in BLOCK_FILES):
+            return d
+    return None
+
+
+def single_article(changed):
+    """Если все изменения — внутри одной статьи (и это не meta.yml,
+    который влияет на меню всех страниц), можно пересобрать только её."""
+    if not changed or any(Path(f).name == "meta.yml" for f in changed):
+        return None
+    dirs = {article_dir_of(f) for f in changed}
+    if len(dirs) == 1 and None not in dirs:
+        return dirs.pop()
+    return None
+
+
+def rebuild(changed=None):
     global stamp
     t0 = time.time()
-    res = subprocess.run([sys.executable, str(ROOT / "build.py")],
-                         capture_output=True, text=True)
+    only = single_article(changed)
+    cmd = [sys.executable, str(ROOT / "build.py")]
+    if only:
+        cmd += ["--only", str(only)]
+    res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
         print(f"[watch] ✗ сборка упала:\n{res.stdout[-1500:]}{res.stderr[-1500:]}", flush=True)
         return
     stamp = str(time.time())
-    print(f"[watch] ✓ пересобрано за {time.time() - t0:.1f} c", flush=True)
+    what = f"статья {only.name}" if only else "всё"
+    print(f"[watch] ✓ {what} за {time.time() - t0:.1f} c", flush=True)
 
 
 def watch_loop():
@@ -58,11 +90,13 @@ def watch_loop():
         time.sleep(0.4)
         new = snapshot()
         if new != state:
-            state = new
             # даём редактору дописать файлы
             time.sleep(0.2)
-            state = snapshot()
-            rebuild()
+            new = snapshot()
+            changed = {k for k in set(new) | set(state)
+                       if state.get(k) != new.get(k)}
+            state = new
+            rebuild(changed)
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):

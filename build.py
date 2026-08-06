@@ -309,8 +309,31 @@ def article_count(node):
 
 # ---------------------------------------------------------------- нумерация формул
 
+_EQCACHE_PATH = CACHE / "eqmaths.json"
+_eqcache = None
+
+
+def save_eqcache():
+    if _eqcache is not None:
+        CACHE.mkdir(parents=True, exist_ok=True)
+        _EQCACHE_PATH.write_text(json.dumps(_eqcache, ensure_ascii=False), encoding="utf-8")
+
+
 def display_maths(md_path):
-    """Исходники выключных формул файла в порядке появления."""
+    """Исходники выключных формул файла в порядке появления.
+    Кэшируется по mtime+size — это самая дорогая часть сборки
+    (вызов pandoc на каждый md), а меняются файлы редко."""
+    global _eqcache
+    if _eqcache is None:
+        try:
+            _eqcache = json.loads(_EQCACHE_PATH.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            _eqcache = {}
+    st = md_path.stat()
+    ent = _eqcache.get(str(md_path))
+    if ent and ent["mtime"] == st.st_mtime and ent["size"] == st.st_size:
+        return ent["maths"]
+
     res = run(["pandoc", str(md_path), "--from", "markdown", "--to", "json"])
     doc = json.loads(res.stdout)
     out = []
@@ -328,6 +351,7 @@ def display_maths(md_path):
                 walk(v)
 
     walk(doc.get("blocks", []))
+    _eqcache[str(md_path)] = {"mtime": st.st_mtime, "size": st.st_size, "maths": out}
     return out
 
 
@@ -729,18 +753,62 @@ def write_group_pages(writer, node, crumb_chain):
     for g in node["groups"]:
         write_group_pages(writer, g, child_chain)
     for art in node["articles"]:
-        log(f'статья: {art["rel"]}')
-        site_figs, _ = prepare_figures(art)
-        if site_figs:
-            figout = SITE / art["rel"] / "figures"
-            figout.mkdir(parents=True, exist_ok=True)
-            for f in site_figs:
-                shutil.copy(f, figout / f.name)
-        writer.write_page(
-            f'{art["rel"]}/index.html', art["meta"]["title"],
-            article_content_html(art),
-            writer.crumbs(child_chain + [(art["meta"]["title"], None)]),
-        )
+        write_article_page(writer, art, child_chain)
+
+
+def write_article_page(writer, art, crumb_chain):
+    log(f'статья: {art["rel"]}')
+    site_figs, _ = prepare_figures(art)
+    if site_figs:
+        figout = SITE / art["rel"] / "figures"
+        figout.mkdir(parents=True, exist_ok=True)
+        for f in site_figs:
+            shutil.copy(f, figout / f.name)
+    writer.write_page(
+        f'{art["rel"]}/index.html', art["meta"]["title"],
+        article_content_html(art),
+        writer.crumbs(crumb_chain + [(art["meta"]["title"], None)]),
+    )
+
+
+def find_article(tree, target_dir):
+    """Статья по её папке + цепочка хлебных крошек до неё."""
+    target = Path(target_dir).resolve()
+
+    def walk(node, chain):
+        chain = chain + [(node["meta"]["title"], f'{node["rel"]}/index.html')]
+        for a in node["articles"]:
+            if a["dir"].resolve() == target:
+                return a, chain
+        for g in node["groups"]:
+            found = walk(g, chain)
+            if found:
+                return found
+        return None
+
+    for sec in tree:
+        found = walk(sec, [("Главная", "index.html")])
+        if found:
+            return found
+    return None
+
+
+def build_one_article(tree, config, writer, target_dir):
+    """Быстрый путь для предпросмотра: перестраивается только одна статья.
+
+    Остальные страницы не трогаются (их ссылки на номера формул этой статьи
+    могут устареть до следующей полной сборки — для превью это ок)."""
+    found = find_article(tree, target_dir)
+    if not found:
+        return False
+    art, chain = found
+    all_articles = [a for sec in tree for a in iter_articles(sec)]
+    for a in all_articles:
+        analyze_equations(a)  # быстро: карта формул кэшируется по mtime
+    link_foreign_labels(all_articles)
+    validate_refs(art, collect_rels(tree))
+    write_article_page(writer, art, chain)
+    return True
 
 
 def build_site(tree, config, writer):
@@ -915,6 +983,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--pdf", action="store_true", help="собрать и PDF тоже")
     ap.add_argument("--clean", action="store_true", help="очистить site/ и .cache/")
+    ap.add_argument("--only", metavar="DIR",
+                    help="пересобрать только одну статью (папка в content/); "
+                         "используется живым предпросмотром")
     args = ap.parse_args()
 
     if args.clean:
@@ -933,7 +1004,13 @@ def main():
 
     try:
         writer = SiteWriter(tree, config)
+        if args.only and (SITE / "assets").is_dir():
+            if build_one_article(tree, config, writer, args.only):
+                save_eqcache()
+                return
+            warn(f"--only: статья {args.only} не найдена — собираю всё")
         build_site(tree, config, writer)
+        save_eqcache()
         log(f"сайт готов: {SITE}")
 
         if args.pdf:
