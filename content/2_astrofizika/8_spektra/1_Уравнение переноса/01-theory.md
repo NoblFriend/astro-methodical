@@ -126,12 +126,12 @@ $$
 \frac{\dd I_\nu}{\dd l \cdot \alpha_\nu} = \frac{j_\nu}{\alpha_\nu} - I_\nu
 $$
 
+::: {.formula-box caption="Уравнение переноса, выраженное через функцию источника"}
 $$
-\boxed{
 \frac{\dd I_\nu}{\dd } = S_\nu - I_\nu
-}
 \label{perenos}
 $$
+:::
 
 ## Закон Киргофа
 
