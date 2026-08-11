@@ -53,7 +53,7 @@ $$
 
 <table>
 <tr>
-<td width="33%" align="center">
+<td width="20%" align="center">
 
 Равенство вкладов материи и излучения
 
@@ -83,7 +83,7 @@ $$
 
 </td>
 
-<td width="33%" align="center">
+<td width="20%" align="center">
 
 Равенство вкладов излучения и тёмной энергии
 
@@ -115,7 +115,7 @@ $$
 
 </td>
 
-<td width="33%" align="center">
+<td width="20%" align="center">
 
 Равенство вкладов материи и тёмной энергии
 
