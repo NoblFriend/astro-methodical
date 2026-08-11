@@ -94,6 +94,7 @@ $$
 ::: {.formula-box caption="Уравнение Фридмана для плоской вселенной через параметры плотности"}
 $$
 H^2 = H_0^2 \cdot (\Omega_{m 0} a^{-3} + \Omega_{r 0} a^{-4} + \Omega_{\Lambda 0})
+\label{Fr_eq}
 $$
 :::
 
@@ -102,6 +103,7 @@ $$
 ::: {.formula-box caption="Уравнение Фридмана через параметры плотности"}
 $$
 H^2 = H_0^2 \cdot (\Omega_{m 0} a^{-3} + \Omega_{r 0} a^{-4} + \Omega_{\Lambda 0} + \Omega_{k 0} a^{-2})
+\label{Fr_eq_k}
 $$
 :::
 
