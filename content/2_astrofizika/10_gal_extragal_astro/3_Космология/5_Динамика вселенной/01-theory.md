@@ -131,7 +131,7 @@ H^2 = H_0^2\cdot(\Omega_{0m}\cdot a^{-3})
 $$
 
 $$
-\frac{d a}{a\cdot d t} = H_0\cdot(1\cdot a^{3/2})
+\frac{d a}{a\cdot d t} = H_0\cdot(1\cdot a^{-3/2})
 $$
 
 $$
@@ -189,7 +189,7 @@ H^2 = H_0^2\cdot(\Omega_{0r}\cdot a^{-4})
 $$
 
 $$
-\frac{d a}{a\cdot d t} = H_0\cdot(1\cdot a^{2})
+\frac{d a}{a\cdot d t} = H_0\cdot(1\cdot a^{-2})
 $$
 
 $$
